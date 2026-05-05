@@ -1,0 +1,35 @@
+{
+  "name": "image_ful",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joadsonrocha/lumina-presentation.git"
+  },
+  "build": {
+    "appId": "com.joadsonrocha.lumina",
+    "productName": "Lumina",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "joadsonrocha",
+        "repo": "lumina-presentation"
+      }
+    ]
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^41.5.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3",
+    "exifr": "^7.1.3"
+  }
+}

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeção Lumina</title>
+    <style>
+        :root {
+            --brand-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+        }
+        body {
+            margin: 0;
+            padding: 20px; /* Margem de segurança na projeção */
+            background-color: #000;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            cursor: none;
+            box-sizing: border-box;
+        }
+        body.show-cursor {
+            cursor: default;
+        }
+        img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: opacity 0.4s ease-in-out;
+            border-radius: 8px; /* Cantos arredondados sutis na projeção */
+        }
+        .nav-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 3rem;
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        body.show-cursor .nav-overlay {
+            opacity: 1;
+        }
+        .nav-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(15px);
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+        .nav-btn:hover {
+            background: var(--brand-gradient);
+            border-color: transparent;
+            transform: scale(1.1);
+        }
+        .close-hint {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            color: white;
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        body.show-cursor .close-hint {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="show-cursor">
+    <div class="close-hint">ESC para sair</div>
+    <img id="projectorImage" src="" alt="">
+    
+    <div class="nav-overlay">
+        <button id="prevBtn" class="nav-btn">‹</button>
+        <button id="nextBtn" class="nav-btn">›</button>
+    </div>
+
+    <script>
+        const img = document.getElementById('projectorImage');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        let idleTimer = null;
+
+        function resetIdleTimer() {
+            document.body.classList.add('show-cursor');
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                document.body.classList.remove('show-cursor');
+            }, 3000);
+        }
+
+        document.addEventListener('mousemove', resetIdleTimer);
+
+        window.electronAPI.onUpdateImage((path) => {
+            img.style.opacity = 0;
+            setTimeout(() => {
+                img.src = `file://${path}`;
+                img.style.opacity = 1;
+            }, 150);
+        });
+
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.electronAPI.navigatePrev();
+            resetIdleTimer();
+        });
+
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.electronAPI.navigateNext();
+            resetIdleTimer();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            resetIdleTimer();
+            if (e.key === 'Escape') {
+                window.electronAPI.closePresentation();
+            } else if (e.key === 'ArrowRight') {
+                window.electronAPI.navigateNext();
+            } else if (e.key === 'ArrowLeft') {
+                window.electronAPI.navigatePrev();
+            }
+        });
+
+        resetIdleTimer();
+    </script>
+</body>
+</html>

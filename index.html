@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' file: data:; font-src 'self' https://fonts.gstatic.com; media-src 'self' blob:;">
+    <title>Lumina - Apresentação de Imagens</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="node_modules/exifr/dist/full.umd.js"></script>
+</head>
+<body id="dropZone">
+    <div id="slideshowProgress" class="progress-bar"></div>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <img src="logo.png" alt="Lumina Logo">
+                <h1>Lumina</h1>
+            </div>
+            <div class="actions">
+                <div id="musicPlayer" class="music-player hidden">
+                    <button id="musicPlayPause" class="btn-sm">⏸</button>
+                    <button id="musicStop" class="btn-sm">⏹</button>
+                    <span id="musicName" class="music-name">Musica...</span>
+                </div>
+                <button id="musicBtn" class="btn-icon hidden" title="Música de Fundo">
+                    <span>🎵</span>
+                </button>
+                <input type="file" id="audioInput" accept="audio/*" style="display: none;">
+                <button id="playPauseBtn" class="btn-icon" title="Slideshow">
+                    <span>▶</span>
+                </button>
+                <button id="projectBtn" class="btn-icon" title="Projetar (F5)">
+                    <span>📺</span>
+                </button>
+                <button id="settingsBtn" class="btn-icon" title="Configurações">
+                    <span>⚙️</span>
+                </button>
+                <button id="selectBtn" class="btn primary">
+                    <span>✨</span> Importar Imagens
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div id="welcomeScreen" class="welcome">
+                <div class="welcome-content">
+                    <div class="hero-icon">📸</div>
+                    <h2>Lumina Presentation</h2>
+                    <p>A experiência visual mais moderna para suas fotos.</p>
+                    <p class="hint">Aperte <strong>F5</strong> para brilhar em tela cheia.</p>
+                </div>
+            </div>
+
+            <div id="viewerScreen" class="viewer hidden">
+                <aside id="thumbSidebar" class="thumb-sidebar">
+                    <button id="toggleSidebar" class="sidebar-toggle-btn" title="Recolher/Expandir">
+                        <span>‹</span>
+                    </button>
+                    <div class="sidebar-header">Miniaturas</div>
+                    <div id="thumbList" class="thumb-list"></div>
+                </aside>
+
+                <div id="imageDisplay" class="image-display show-cursor">
+                    <div class="image-container" id="zoomContainer">
+                        <img id="mainImage" src="" alt="Lumina Image">
+                    </div>
+                    
+                    <div class="nav-overlay">
+                        <button id="prevBtn" class="nav-btn">‹</button>
+                        <button id="nextBtn" class="nav-btn">›</button>
+                    </div>
+
+                    <div id="imageCounterOverlay" class="image-counter">
+                        <span id="counter">0 / 0</span>
+                    </div>
+
+                    <div class="quick-filters">
+                        <button class="filter-btn" data-filter="none">Normal</button>
+                        <button class="filter-btn" data-filter="grayscale(1) contrast(1.2)">P&B</button>
+                        <button class="filter-btn" data-filter="sepia(1) brightness(0.9)">Sépia</button>
+                        <button class="filter-btn" data-filter="grayscale(1) contrast(5) brightness(1.1)" title="Efeito Mangá">Mangá</button>
+                        <button id="exifBtn" class="filter-btn">Metadados</button>
+                    </div>
+
+                    <div id="exifCard" class="exif-card hidden">
+                        <div class="exif-header">
+                            <h4>Metadados da Imagem</h4>
+                            <button id="closeExif" class="close-btn-sm">&times;</button>
+                        </div>
+                        <div id="exifContent" class="exif-content">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="controlsBar" class="controls-bar hidden">
+                    <!-- Informações movidas para o overlay da imagem -->
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="settingsScreen" class="settings-screen hidden">
+                <div class="settings-container">
+                    <header class="settings-header">
+                        <button id="backBtn" class="btn-text">
+                            <span>←</span> Voltar
+                        </button>
+                        <h2>Configurações do Lumina</h2>
+                    </header>
+
+                    <div class="settings-grid">
+                        <div class="settings-section">
+                            <h3>🎞️ Slideshow & Exibição</h3>
+                            <div class="setting-item">
+                                <label for="slideshowSpeed">Velocidade (segundos)</label>
+                                <input type="number" id="slideshowSpeed" min="1" max="60" value="4">
+                            </div>
+                            <div class="setting-item">
+                                <label for="borderSize">Tamanho da Borda (px)</label>
+                                <input type="range" id="borderSize" min="0" max="100" value="40">
+                            </div>
+                            <div class="setting-item">
+                                <label for="imageFit">Ajuste da Imagem</label>
+                                <select id="imageFit">
+                                    <option value="contain">Caber na Tela (Fit)</option>
+                                    <option value="cover">Preencher Tela (Cover)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="transitionType">Efeito de Transição</label>
+                                <select id="transitionType">
+                                    <option value="fade">Esmaecer (Fade)</option>
+                                    <option value="slide">Deslizar (Slide)</option>
+                                    <option value="none">Instantâneo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>⚙️ Preferências</h3>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="autoHideOption" checked> Auto-ocultar controles
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="loopOption" checked> Loop infinito
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="showInfoOption" checked> Mostrar info da imagem
+                            </label>
+                            
+                            <div class="support-box">
+                                <h3>💖 Apoie o Projeto</h3>
+                                <p>Gostou do Lumina? Considere apoiar o desenvolvimento.</p>
+                                <button id="supportBtn" class="btn-support">☕ Apoie-me</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-footer">
+                        <button id="updateBtn" class="btn-text">Verificar Atualizações</button>
+                        <button id="saveSettings" class="btn primary">Salvar Alterações</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>
