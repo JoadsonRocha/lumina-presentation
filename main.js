@@ -3,6 +3,12 @@ const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
+// Ensure single instance lock to prevent cache locking conflicts
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    app.quit();
+}
+
 // Disable default menu
 Menu.setApplicationMenu(null);
 
@@ -25,7 +31,7 @@ async function scanDirectoryForMedia(dirPath) {
     const mediaFiles = [];
     
     async function scan(currentDir, depth = 0) {
-        if (depth > 3) return; // Prevent excessive recursion
+        if (depth > 4) return;
         try {
             const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
             for (const entry of entries) {
@@ -52,6 +58,18 @@ async function scanDirectoryForMedia(dirPath) {
     return mediaFiles;
 }
 
+function getTargetDisplay() {
+    const displays = screen.getAllDisplays();
+    const primaryDisplay = screen.getPrimaryDisplay();
+    // Prefer secondary display if available
+    const secondaryDisplay = displays.find(d => d.id !== primaryDisplay.id);
+    return {
+        display: secondaryDisplay || primaryDisplay,
+        isSecondary: Boolean(secondaryDisplay),
+        allDisplays: displays
+    };
+}
+
 function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
@@ -59,13 +77,13 @@ function createMainWindow() {
         minWidth: 960,
         minHeight: 680,
         title: 'Lumina Presentation',
-        backgroundColor: '#070709',
+        backgroundColor: '#09090b',
         icon: path.join(__dirname, 'logo.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: false // Sandbox false allows preload full IPC capabilities
+            sandbox: false
         },
         show: false
     });
@@ -77,18 +95,28 @@ function createMainWindow() {
     });
 
     mainWindow.on('closed', () => {
-        if (presentationWindow) presentationWindow.close();
+        if (presentationWindow && !presentationWindow.isDestroyed()) {
+            presentationWindow.close();
+        }
         mainWindow = null;
+    });
+
+    // Notify renderer on resize / fullscreen changes
+    mainWindow.on('enter-full-screen', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('main-fullscreen-changed', true);
+        }
+    });
+
+    mainWindow.on('leave-full-screen', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('main-fullscreen-changed', false);
+        }
     });
 }
 
 function togglePresentation() {
-    const displays = screen.getAllDisplays();
-    const externalDisplay = displays.find((display) => {
-        return display.bounds.x !== 0 || display.bounds.y !== 0;
-    });
-
-    if (presentationWindow) {
+    if (presentationWindow && !presentationWindow.isDestroyed()) {
         presentationWindow.close();
         presentationWindow = null;
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -97,13 +125,13 @@ function togglePresentation() {
         return;
     }
 
-    const displayToUse = externalDisplay || screen.getPrimaryDisplay();
+    const { display, isSecondary } = getTargetDisplay();
 
     presentationWindow = new BrowserWindow({
-        x: displayToUse.bounds.x,
-        y: displayToUse.bounds.y,
-        width: displayToUse.bounds.width,
-        height: displayToUse.bounds.height,
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: display.bounds.width,
+        height: display.bounds.height,
         fullscreen: true,
         frame: false,
         backgroundColor: '#000000',
@@ -113,10 +141,18 @@ function togglePresentation() {
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false
-        }
+        },
+        show: false
     });
 
+    presentationWindow.setBounds(display.bounds);
+    presentationWindow.setFullScreen(true);
     presentationWindow.loadFile('presentation.html');
+
+    presentationWindow.once('ready-to-show', () => {
+        presentationWindow.show();
+        presentationWindow.setFullScreen(true);
+    });
 
     presentationWindow.on('closed', () => {
         presentationWindow = null;
@@ -128,6 +164,7 @@ function togglePresentation() {
     presentationWindow.webContents.once('did-finish-load', () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('projection-status-changed', true);
+            mainWindow.webContents.send('request-sync-state');
         }
         if (currentProjectionState) {
             presentationWindow.webContents.send('sync-projection', currentProjectionState);
@@ -138,7 +175,7 @@ function togglePresentation() {
 app.whenReady().then(() => {
     createMainWindow();
 
-    // Register F5 shortcut for projection
+    // Register local/global shortcuts safely
     globalShortcut.register('F5', () => {
         togglePresentation();
     });
@@ -146,6 +183,13 @@ app.whenReady().then(() => {
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
     });
+});
+
+app.on('second-instance', () => {
+    if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+    }
 });
 
 app.on('will-quit', () => {
@@ -156,7 +200,7 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC Handlers: Media Selection
+// IPC: Media Selection
 ipcMain.handle('select-media', async () => {
     if (!mainWindow) return [];
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -185,7 +229,7 @@ ipcMain.handle('select-media', async () => {
     }));
 });
 
-// IPC Handlers: Folder Selection
+// IPC: Folder Selection
 ipcMain.handle('select-folder', async () => {
     if (!mainWindow) return [];
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -201,7 +245,7 @@ ipcMain.handle('select-folder', async () => {
     return await scanDirectoryForMedia(folderPath);
 });
 
-// IPC Handlers: Audio Selection
+// IPC: Audio Selection
 ipcMain.handle('select-audio', async () => {
     if (!mainWindow) return [];
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -220,7 +264,7 @@ ipcMain.handle('select-audio', async () => {
     }));
 });
 
-// IPC Handlers: Parse Dropped Files
+// IPC: Dragged paths
 ipcMain.handle('parse-dropped-paths', async (event, paths) => {
     const mediaList = [];
     for (const itemPath of paths) {
@@ -246,7 +290,7 @@ ipcMain.handle('parse-dropped-paths', async (event, paths) => {
     return mediaList;
 });
 
-// State Syncing with Projection
+// IPC: Projection Sync & Stage Commands
 ipcMain.on('sync-projection', (event, state) => {
     currentProjectionState = state;
     if (presentationWindow && !presentationWindow.isDestroyed()) {
@@ -254,7 +298,6 @@ ipcMain.on('sync-projection', (event, state) => {
     }
 });
 
-// Stage Commands (Blackout, Whiteout, etc.)
 ipcMain.on('stage-command', (event, command) => {
     if (presentationWindow && !presentationWindow.isDestroyed()) {
         presentationWindow.webContents.send('stage-command', command);
@@ -262,8 +305,12 @@ ipcMain.on('stage-command', (event, command) => {
 });
 
 ipcMain.on('close-presentation', () => {
-    if (presentationWindow) {
+    if (presentationWindow && !presentationWindow.isDestroyed()) {
         presentationWindow.close();
+        presentationWindow = null;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('projection-status-changed', false);
+        }
     }
 });
 
@@ -275,10 +322,16 @@ ipcMain.handle('get-projection-status', () => {
     return presentationWindow !== null && !presentationWindow.isDestroyed();
 });
 
+// IPC: Main Window Fullscreen
 ipcMain.on('toggle-fullscreen-main', () => {
-    if (mainWindow) {
-        mainWindow.setFullScreen(!mainWindow.isFullScreen());
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        const isFull = !mainWindow.isFullScreen();
+        mainWindow.setFullScreen(isFull);
     }
+});
+
+ipcMain.handle('is-fullscreen-main', () => {
+    return mainWindow && !mainWindow.isDestroyed() ? mainWindow.isFullScreen() : false;
 });
 
 // Navigation from Projector to Main
@@ -302,7 +355,7 @@ ipcMain.on('check-for-updates', () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('update-message', {
                 status: 'info',
-                message: 'O auto-updater está em modo de desenvolvimento (versão 2.0.0).'
+                message: 'Versão de desenvolvimento 2.0.0.'
             });
         }
     }
@@ -312,7 +365,7 @@ autoUpdater.on('update-available', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-message', {
             status: 'available',
-            message: 'Uma nova versão do Lumina está disponível para download!'
+            message: 'Uma nova versão do Lumina está disponível!'
         });
     }
 });
@@ -321,7 +374,7 @@ autoUpdater.on('update-not-available', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-message', {
             status: 'not-available',
-            message: 'Você já está usando a versão mais recente do Lumina.'
+            message: 'Você já está usando a versão mais recente.'
         });
     }
 });

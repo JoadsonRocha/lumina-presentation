@@ -26,7 +26,7 @@ let startX, startY, translateX = 0, translateY = 0;
 // Settings Defaults
 let settings = {
     slideshowSpeed: 4000,
-    borderSize: 30,
+    borderSize: 20,
     imageFit: 'contain',
     transitionType: 'fade',
     videoAutoAdvance: true,
@@ -71,7 +71,6 @@ const timerResetBtn = document.getElementById('timerResetBtn');
 // Next Up Card
 const nextUpCard = document.getElementById('nextUpCard');
 const nextUpThumbImg = document.getElementById('nextUpThumbImg');
-const nextUpBadge = document.getElementById('nextUpBadge');
 const nextUpName = document.getElementById('nextUpName');
 
 // Video Controls Bar
@@ -88,6 +87,7 @@ const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const projectBtn = document.getElementById('projectBtn');
+const fullscreenMainBtn = document.getElementById('fullscreenMainBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const gridModeBtn = document.getElementById('gridModeBtn');
 const selectBtn = document.getElementById('selectBtn');
@@ -144,7 +144,6 @@ const settingsScreen = document.getElementById('settingsScreen');
 const backBtn = document.getElementById('backBtn');
 const saveSettingsBtn = document.getElementById('saveSettings');
 const updateBtn = document.getElementById('updateBtn');
-const supportBtn = document.getElementById('supportBtn');
 const slideshowSpeedInput = document.getElementById('slideshowSpeed');
 const borderSizeInput = document.getElementById('borderSize');
 const imageFitInput = document.getElementById('imageFit');
@@ -154,6 +153,21 @@ const ambilightCheckbox = document.getElementById('ambilightOption');
 const presenterHUDCheckbox = document.getElementById('presenterHUDOption');
 const autoHideCheckbox = document.getElementById('autoHideOption');
 const loopCheckbox = document.getElementById('loopOption');
+
+// ==========================================================================
+// PATH & URL HELPER
+// ==========================================================================
+function toFileUrl(filePath) {
+    if (!filePath) return '';
+    if (filePath.startsWith('file://') || filePath.startsWith('data:') || filePath.startsWith('blob:')) {
+        return filePath;
+    }
+    let normalized = filePath.replace(/\\/g, '/');
+    if (!normalized.startsWith('/')) {
+        normalized = '/' + normalized;
+    }
+    return 'file://' + encodeURI(normalized);
+}
 
 // ==========================================================================
 // INITIALIZATION & SETTINGS STORAGE
@@ -173,7 +187,7 @@ function loadSavedSettings() {
 function saveSettingsToStorage() {
     try {
         localStorage.setItem('lumina_settings_v2', JSON.stringify(settings));
-        showToast('Configurações salvas com sucesso!', 'success', '💾');
+        showToast('Preferências salvas com sucesso', 'success');
     } catch (e) {
         console.error('Error saving settings:', e);
     }
@@ -204,6 +218,19 @@ window.electronAPI.getProjectionStatus().then(isLive => {
 
 window.electronAPI.onProjectionStatusChanged((isLive) => {
     updateProjectionStatus(isLive);
+    if (isLive) {
+        syncToProjection();
+    }
+});
+
+window.electronAPI.onRequestSyncState(() => {
+    syncToProjection();
+});
+
+window.electronAPI.onMainFullscreenChanged((isFull) => {
+    if (fullscreenMainBtn) {
+        fullscreenMainBtn.classList.toggle('active', isFull);
+    }
 });
 
 function updateProjectionStatus(isLive) {
@@ -221,17 +248,16 @@ function updateProjectionStatus(isLive) {
 // ==========================================================================
 // TOAST NOTIFICATION SYSTEM
 // ==========================================================================
-function showToast(message, type = 'info', icon = '✨') {
+function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    toast.textContent = message;
     toastContainer.appendChild(toast);
 
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateX(50px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3200);
+        setTimeout(() => toast.remove(), 250);
+    }, 2800);
 }
 
 // ==========================================================================
@@ -245,13 +271,13 @@ async function handleSelectMedia() {
 }
 
 async function handleSelectFolder() {
-    showToast('Varrendo pasta por fotos e vídeos...', 'info', '📁');
+    showToast('Lendo pasta...', 'info');
     const items = await window.electronAPI.selectFolder();
     if (items && items.length > 0) {
         loadMediaList(items);
-        showToast(`${items.length} mídias encontradas na pasta!`, 'success', '🎉');
+        showToast(`${items.length} itens carregados da pasta`, 'success');
     } else {
-        showToast('Nenhuma imagem ou vídeo suportado encontrado na pasta.', 'warn', '⚠️');
+        showToast('Nenhum arquivo compatível encontrado na pasta', 'warn');
     }
 }
 
@@ -290,7 +316,7 @@ function loadMediaList(newItems) {
 
     const imgCount = mediaItems.filter(m => m.type === 'image').length;
     const vidCount = mediaItems.filter(m => m.type === 'video').length;
-    showToast(`Carregadas ${imgCount} foto(s) e ${vidCount} vídeo(s)!`, 'success', '🎬');
+    showToast(`${imgCount} foto(s), ${vidCount} vídeo(s) carregados`, 'success');
 }
 
 // Drag & Drop
@@ -322,7 +348,7 @@ dropZone.addEventListener('drop', async (e) => {
     if (parsedMedia && parsedMedia.length > 0) {
         loadMediaList(parsedMedia);
     } else {
-        showToast('Nenhum arquivo de imagem ou vídeo compatível encontrado.', 'warn', '⚠️');
+        showToast('Nenhum arquivo compatível encontrado', 'warn');
     }
 });
 
@@ -344,15 +370,16 @@ function renderThumbnails() {
         const thumb = document.createElement('div');
         thumb.className = `thumb-item ${item.originalIndex === currentIndex ? 'active' : ''}`;
         
+        const src = toFileUrl(item.path);
         if (item.type === 'video') {
             thumb.innerHTML = `
-                <video src="file://${item.path}#t=0.5" preload="metadata" muted></video>
-                <span class="thumb-type-badge">🎥 VÍDEO</span>
+                <video src="${src}#t=0.5" preload="metadata" muted></video>
+                <span class="thumb-type-badge">VÍDEO</span>
                 <span class="thumb-index">#${item.originalIndex + 1}</span>
             `;
         } else {
             thumb.innerHTML = `
-                <img src="file://${item.path}" loading="lazy" alt="${item.name}">
+                <img src="${src}" loading="lazy" alt="${item.name}">
                 <span class="thumb-index">#${item.originalIndex + 1}</span>
             `;
         }
@@ -395,7 +422,6 @@ sidebarSortBtn.onclick = () => {
 async function showMedia(index) {
     if (mediaItems.length === 0) return;
     
-    // Bounds check
     if (index < 0) index = settings.loopEnabled ? mediaItems.length - 1 : 0;
     if (index >= mediaItems.length) index = settings.loopEnabled ? 0 : mediaItems.length - 1;
     
@@ -428,8 +454,8 @@ async function showMedia(index) {
             mainImage.classList.remove('visible');
             mainVideo.classList.remove('hidden');
 
-            const videoSrc = `file://${currentMedia.path}`;
-            if (mainVideo.src !== videoSrc && !mainVideo.src.endsWith(encodeURI(currentMedia.path))) {
+            const videoSrc = toFileUrl(currentMedia.path);
+            if (mainVideo.src !== videoSrc) {
                 mainVideo.src = videoSrc;
             }
 
@@ -443,10 +469,8 @@ async function showMedia(index) {
             vidPlayPauseBtn.textContent = '⏸';
 
             // Ambilight
-            if (settings.ambilightEnabled) {
-                ambilightBg.style.backgroundImage = 'none';
-                ambilightBg.classList.remove('active');
-            }
+            ambilightBg.style.backgroundImage = 'none';
+            ambilightBg.classList.remove('active');
         } else {
             // IMAGE MODE
             if (!mainVideo.paused) mainVideo.pause();
@@ -455,7 +479,7 @@ async function showMedia(index) {
             videoControlsBar.classList.add('hidden');
 
             mainImage.classList.remove('hidden');
-            const imgSrc = `file://${currentMedia.path}`;
+            const imgSrc = toFileUrl(currentMedia.path);
             mainImage.src = imgSrc;
             
             mainImage.className = `media-node ${settings.imageFit === 'cover' ? 'fit-cover' : ''} ${trans === 'ken-burns' ? 'ken-burns' : ''}`;
@@ -471,14 +495,14 @@ async function showMedia(index) {
             }
         }
 
-        // Clean transition classes and reveal
+        // Reveal
         mainImage.classList.remove('slide-out', 'zoom-fade-out');
         mainVideo.classList.remove('slide-out', 'zoom-fade-out');
         if (currentMedia.type === 'video') mainVideo.classList.add('visible');
         else mainImage.classList.add('visible');
 
         // Update HUD & Next Up
-        counter.textContent = `${currentIndex + 1} de ${mediaItems.length}`;
+        counter.textContent = `${currentIndex + 1} / ${mediaItems.length}`;
         updateNextUpCard();
         updateActiveThumbnail();
 
@@ -492,7 +516,7 @@ async function showMedia(index) {
             clearInterval(progressInterval);
             slideshowProgress.style.width = '0%';
         }
-    }, trans === 'none' ? 0 : 120);
+    }, trans === 'none' ? 0 : 90);
 }
 
 // Next Up Card Logic
@@ -506,12 +530,11 @@ function updateNextUpCard() {
     const nextItem = mediaItems[nextIdx];
 
     nextUpName.textContent = nextItem.name;
-    nextUpBadge.textContent = nextItem.type === 'video' ? 'VÍDEO' : 'FOTO';
 
     if (nextItem.type === 'video') {
         nextUpThumbImg.src = 'logo.png';
     } else {
-        nextUpThumbImg.src = `file://${nextItem.path}`;
+        nextUpThumbImg.src = toFileUrl(nextItem.path);
     }
 }
 
@@ -605,7 +628,7 @@ function toggleBlackout() {
     whiteoutBtn.classList.remove('active');
     
     syncToProjection();
-    showToast(blackoutActive ? 'Modo Blackout (Tela Preta) Ativado' : 'Blackout Desativado', 'info', '⬛');
+    showToast(blackoutActive ? 'Blackout ativado' : 'Blackout desativado');
 }
 
 function toggleWhiteout() {
@@ -618,7 +641,7 @@ function toggleWhiteout() {
     blackoutBtn.classList.remove('active');
 
     syncToProjection();
-    showToast(whiteoutActive ? 'Modo Whiteout (Tela Branca) Ativado' : 'Whiteout Desativado', 'info', '⬜');
+    showToast(whiteoutActive ? 'Whiteout ativado' : 'Whiteout desativado');
 }
 
 function rotateMedia() {
@@ -629,7 +652,7 @@ function rotateMedia() {
     mainImage.style.transform = `rotate(${currentRotation}deg)`;
     mainVideo.style.transform = `rotate(${currentRotation}deg)`;
     syncToProjection();
-    showToast(`Girado para ${currentRotation}°`, 'info', '🔄');
+    showToast(`Rotação: ${currentRotation}°`);
 }
 
 rotateBtn.onclick = rotateMedia;
@@ -694,7 +717,6 @@ function startProgressBar() {
     progress = 0;
     slideshowProgress.style.width = '0%';
     
-    // For videos, use video duration or speed
     let duration = settings.slideshowSpeed;
     if (mediaItems[currentIndex]?.type === 'video' && mainVideo.duration && settings.videoAutoAdvance) {
         duration = mainVideo.duration * 1000;
@@ -713,25 +735,22 @@ function startProgressBar() {
 function toggleSlideshow() {
     if (mediaItems.length === 0) return;
     isPlaying = !isPlaying;
-    const icon = playPauseBtn.querySelector('span');
+    const playIcon = document.getElementById('playIcon');
     
     if (isPlaying) {
-        icon.textContent = '⏸';
+        if (playIcon) playIcon.textContent = '⏸';
         playPauseBtn.classList.add('active');
         slideshowInterval = setInterval(() => {
-            // If current is video and videoAutoAdvance is enabled, let onended handle next
             if (mediaItems[currentIndex]?.type === 'video' && settings.videoAutoAdvance) return;
             nextMedia();
         }, settings.slideshowSpeed);
         startProgressBar();
-        showToast('Slideshow iniciado', 'info', '▶');
     } else {
-        icon.textContent = '▶';
+        if (playIcon) playIcon.textContent = '▶';
         playPauseBtn.classList.remove('active');
         clearInterval(slideshowInterval);
         clearInterval(progressInterval);
         slideshowProgress.style.width = '0%';
-        showToast('Slideshow pausado', 'info', '⏸');
     }
 }
 
@@ -755,7 +774,7 @@ timerResetBtn.onclick = (e) => {
     e.stopPropagation();
     presentationSeconds = 0;
     timerDisplay.textContent = '00:00';
-    showToast('Cronômetro zerado', 'info', '⏱️');
+    showToast('Cronômetro zerado');
 };
 
 // ==========================================================================
@@ -803,7 +822,7 @@ imageDisplay.ondblclick = (e) => {
     if (zoomLevel > 1) {
         resetZoom();
     } else {
-        zoomLevel = 2;
+        zoomLevel = 1.75;
         updateZoomTransform();
     }
 };
@@ -823,7 +842,7 @@ function resetZoom() {
 }
 
 // ==========================================================================
-// GRID OVERVIEW MODAL (LIGHT TABLE / MOSAICO)
+// GRID OVERVIEW MODAL (MODO GRADE)
 // ==========================================================================
 function openGridModal() {
     if (mediaItems.length === 0) return;
@@ -861,7 +880,7 @@ gridSortSelect.onchange = () => {
     renderThumbnails();
     renderGridCards();
     showMedia(0);
-    showToast('Mídias reordenadas!', 'info', '🔀');
+    showToast('Ordem atualizada');
 };
 
 function renderGridCards() {
@@ -874,15 +893,16 @@ function renderGridCards() {
         const card = document.createElement('div');
         card.className = `grid-card ${index === currentIndex ? 'active' : ''}`;
         
+        const src = toFileUrl(item.path);
         const isVideo = item.type === 'video';
         const mediaTag = isVideo 
-            ? `<video src="file://${item.path}#t=0.5" muted preload="metadata"></video>` 
-            : `<img src="file://${item.path}" loading="lazy" alt="${item.name}">`;
+            ? `<video src="${src}#t=0.5" muted preload="metadata"></video>` 
+            : `<img src="${src}" loading="lazy" alt="${item.name}">`;
 
         card.innerHTML = `
             ${mediaTag}
-            <span class="grid-card-badge">${isVideo ? '🎥 VÍDEO' : '📸 FOTO'}</span>
-            <button class="grid-delete-btn" title="Remover da Apresentação">&times;</button>
+            <span class="grid-card-badge">${isVideo ? 'VÍDEO' : 'FOTO'}</span>
+            <button class="grid-delete-btn" title="Remover">&times;</button>
             <div class="grid-card-overlay">
                 <span class="grid-card-title">#${index + 1} ${item.name}</span>
             </div>
@@ -914,7 +934,7 @@ function removeMediaItem(index) {
     renderThumbnails();
     renderGridCards();
     showMedia(currentIndex);
-    showToast('Item removido da apresentação', 'info', '🗑️');
+    showToast('Item removido');
 }
 
 // ==========================================================================
@@ -936,7 +956,7 @@ addMusicBtn.onclick = async () => {
         if (backgroundAudio.paused && playlist.length > 0) {
             playTrack(playlist.length - audioFiles.length);
         }
-        showToast(`${audioFiles.length} música(s) adicionadas à playlist!`, 'success', '🎵');
+        showToast(`${audioFiles.length} faixa(s) adicionada(s)`, 'success');
     }
 };
 
@@ -945,7 +965,7 @@ clearPlaylistBtn.onclick = () => {
     backgroundAudio.pause();
     musicPlayer.classList.add('hidden');
     renderPlaylist();
-    showToast('Playlist limpa', 'info', '🗑️');
+    showToast('Playlist limpa');
 };
 
 function renderPlaylist() {
@@ -954,7 +974,7 @@ function renderPlaylist() {
         const item = document.createElement('div');
         item.className = `track-item ${idx === currentTrackIndex ? 'active' : ''}`;
         item.innerHTML = `
-            <span class="track-name">🎵 ${track.name}</span>
+            <span class="track-name">${track.name}</span>
             <span class="track-status">${idx === currentTrackIndex && !backgroundAudio.paused ? '▶' : ''}</span>
         `;
         item.onclick = () => playTrack(idx);
@@ -967,7 +987,7 @@ function playTrack(index) {
     currentTrackIndex = index;
     const track = playlist[currentTrackIndex];
     
-    backgroundAudio.src = `file://${track.path}`;
+    backgroundAudio.src = toFileUrl(track.path);
     backgroundAudio.play().then(() => {
         musicName.textContent = track.name;
         musicPlayer.classList.remove('hidden');
@@ -1028,8 +1048,8 @@ exifBtn.onclick = async () => {
     if (media.type === 'video') {
         exifContent.innerHTML = `
             <div class="exif-item">
-                <span class="exif-label">Tipo de Mídia</span>
-                <span class="exif-value">🎥 Vídeo Digital</span>
+                <span class="exif-label">Tipo</span>
+                <span class="exif-value">Vídeo</span>
             </div>
             <div class="exif-item">
                 <span class="exif-label">Arquivo</span>
@@ -1040,7 +1060,7 @@ exifBtn.onclick = async () => {
                 <span class="exif-value">${formatTime(mainVideo.duration)}</span>
             </div>
             <div class="exif-item">
-                <span class="exif-label">Resolução Nativa</span>
+                <span class="exif-label">Resolução</span>
                 <span class="exif-value">${mainVideo.videoWidth || '?'} x ${mainVideo.videoHeight || '?'} px</span>
             </div>
         `;
@@ -1053,19 +1073,19 @@ exifBtn.onclick = async () => {
         if (data) {
             exifContent.innerHTML = `
                 <div class="exif-item">
-                    <span class="exif-label">Câmera / Equipamento</span>
+                    <span class="exif-label">Câmera</span>
                     <span class="exif-value">${data.Make || ''} ${data.Model || 'Desconhecida'}</span>
                 </div>
                 <div class="exif-item">
-                    <span class="exif-label">Parâmetros de Exposição</span>
+                    <span class="exif-label">Exposição</span>
                     <span class="exif-value">ISO ${data.ISO || 'N/A'} | f/${data.FNumber || 'N/A'} | ${data.ExposureTime ? data.ExposureTime + 's' : 'N/A'}</span>
                 </div>
                 <div class="exif-item">
-                    <span class="exif-label">Resolução Original</span>
+                    <span class="exif-label">Resolução</span>
                     <span class="exif-value">${data.ExifImageWidth || mainImage.naturalWidth || '?'} x ${data.ExifImageHeight || mainImage.naturalHeight || '?'} px</span>
                 </div>
                 <div class="exif-item">
-                    <span class="exif-label">Data de Captura</span>
+                    <span class="exif-label">Data</span>
                     <span class="exif-value">${data.DateTimeOriginal ? new Date(data.DateTimeOriginal).toLocaleDateString('pt-BR') : 'N/A'}</span>
                 </div>
             `;
@@ -1093,7 +1113,7 @@ closeExif.onclick = () => exifCard.classList.add('hidden');
 
 // ==========================================================================
 // SETTINGS SCREEN LOGIC
-// ==========================================================
+// ==========================================================================
 settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
 backBtn.onclick = () => settingsScreen.classList.add('hidden');
 
@@ -1128,19 +1148,21 @@ updateBtn.onclick = () => {
 
 window.electronAPI.onUpdateMessage((data) => {
     updateBtn.textContent = 'Verificar Atualizações';
-    showToast(data.message, data.status === 'error' ? 'error' : 'info', '🚀');
+    showToast(data.message, data.status === 'error' ? 'error' : 'info');
 });
 
-supportBtn.onclick = () => {
-    window.electronAPI.openUrl('https://joadsonrocha.github.io/apoieme/apoie-me.html');
-};
-
 // ==========================================================================
-// DUAL SCREEN PROJECTION IPC & ATALHOS GLOBAIS
+// DUAL SCREEN PROJECTION & FULLSCREEN
 // ==========================================================================
 projectBtn.onclick = () => {
     window.electronAPI.togglePresentation();
 };
+
+if (fullscreenMainBtn) {
+    fullscreenMainBtn.onclick = () => {
+        window.electronAPI.toggleFullscreenMain();
+    };
+}
 
 window.electronAPI.onNavigate((direction) => {
     if (direction === 'next') nextMedia();
@@ -1162,7 +1184,6 @@ document.addEventListener('mousemove', resetIdleTimer);
 
 // Keyboard Shortcuts
 document.addEventListener('keydown', (e) => {
-    // If input is focused in grid modal or settings, ignore general shortcuts
     if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
         if (e.key === 'Escape') {
             document.activeElement.blur();
@@ -1174,6 +1195,16 @@ document.addEventListener('keydown', (e) => {
     resetIdleTimer();
 
     switch (e.key) {
+        case 'F5':
+            e.preventDefault();
+            window.electronAPI.togglePresentation();
+            break;
+        case 'F11':
+        case 'f':
+        case 'F':
+            e.preventDefault();
+            window.electronAPI.toggleFullscreenMain();
+            break;
         case 'ArrowRight':
         case 'd':
         case 'D':
@@ -1212,9 +1243,6 @@ document.addEventListener('keydown', (e) => {
             } else {
                 musicMuteBtn.click();
             }
-            break;
-        case 'F11':
-            window.electronAPI.toggleFullscreenMain();
             break;
         case 'Home':
             if (mediaItems.length > 0) showMedia(0);

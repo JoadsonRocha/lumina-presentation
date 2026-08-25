@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Projection sync & controls
     syncProjection: (state) => ipcRenderer.send('sync-projection', state),
     onSyncProjection: (callback) => ipcRenderer.on('sync-projection', (event, state) => callback(state)),
+    onRequestSyncState: (callback) => ipcRenderer.on('request-sync-state', () => callback()),
     sendStageCommand: (command) => ipcRenderer.send('stage-command', command),
     onStageCommand: (callback) => ipcRenderer.on('stage-command', (event, cmd) => callback(cmd)),
     
@@ -25,6 +26,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Window controls
     toggleFullscreenMain: () => ipcRenderer.send('toggle-fullscreen-main'),
+    isFullscreenMain: () => ipcRenderer.invoke('is-fullscreen-main'),
+    onMainFullscreenChanged: (callback) => ipcRenderer.on('main-fullscreen-changed', (event, isFull) => callback(isFull)),
 
     // Updates & Shell
     checkForUpdates: () => ipcRenderer.send('check-for-updates'),
