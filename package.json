@@ -4,7 +4,8 @@
   "description": "Apresentador e visualizador moderno de imagens e vídeos de alta performance",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "node test-suite.js"
   },
   "keywords": ["presentation", "slideshow", "image-viewer", "video-player", "electron", "dual-screen", "glassmorphism"],
   "author": "Joadson Rocha",
