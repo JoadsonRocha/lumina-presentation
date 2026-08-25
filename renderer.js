@@ -89,12 +89,14 @@ const nextBtn = document.getElementById('nextBtn');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const projectBtn = document.getElementById('projectBtn');
 const fullscreenMainBtn = document.getElementById('fullscreenMainBtn');
+const exportModalBtn = document.getElementById('exportModalBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const gridModeBtn = document.getElementById('gridModeBtn');
 const selectBtn = document.getElementById('selectBtn');
 const importFolderBtn = document.getElementById('importFolderBtn');
 const welcomeSelectBtn = document.getElementById('welcomeSelectBtn');
 const welcomeFolderBtn = document.getElementById('welcomeFolderBtn');
+const welcomeLoadProjectBtn = document.getElementById('welcomeLoadProjectBtn');
 
 // Sidebar Elements
 const thumbSidebar = document.getElementById('thumbSidebar');
@@ -124,6 +126,14 @@ const gridTotalCount = document.getElementById('gridTotalCount');
 const gridSearchInput = document.getElementById('gridSearchInput');
 const gridSortSelect = document.getElementById('gridSortSelect');
 const closeGridBtn = document.getElementById('closeGridBtn');
+
+// Export Modal
+const exportModal = document.getElementById('exportModal');
+const closeExportBtn = document.getElementById('closeExportBtn');
+const exportFolderActionBtn = document.getElementById('exportFolderActionBtn');
+const saveProjectActionBtn = document.getElementById('saveProjectActionBtn');
+const loadProjectActionBtn = document.getElementById('loadProjectActionBtn');
+const saveCurrentActionBtn = document.getElementById('saveCurrentActionBtn');
 
 // Audio & Playlist Elements
 const playlistBtn = document.getElementById('playlistBtn');
@@ -284,6 +294,7 @@ async function handleSelectFolder(replace = false) {
 
 welcomeSelectBtn.onclick = () => handleSelectMedia(true);
 welcomeFolderBtn.onclick = () => handleSelectFolder(true);
+if (welcomeLoadProjectBtn) welcomeLoadProjectBtn.onclick = handleLoadProject;
 
 selectBtn.onclick = () => handleSelectMedia(false);
 importFolderBtn.onclick = () => handleSelectFolder(false);
@@ -1101,6 +1112,124 @@ function removeMediaItem(index) {
 }
 
 // ==========================================================================
+// EXPORT & PROJECT MANAGEMENT
+// ==========================================================================
+exportModalBtn.onclick = () => {
+    exportModal.classList.toggle('hidden');
+};
+
+closeExportBtn.onclick = () => {
+    exportModal.classList.add('hidden');
+};
+
+// 1. Export reordered folder
+exportFolderActionBtn.onclick = async () => {
+    if (mediaItems.length === 0) {
+        showToast('Nenhuma mídia para exportar', 'warn');
+        return;
+    }
+    showToast('Iniciando exportação...', 'info');
+    const result = await window.electronAPI.exportReorderedFolder(mediaItems);
+    if (result.success) {
+        showToast(result.message, 'success');
+        exportModal.classList.add('hidden');
+    } else {
+        showToast(result.message || 'Exportação cancelada', 'warn');
+    }
+};
+
+// 2. Save Project (.lumina)
+saveProjectActionBtn.onclick = async () => {
+    if (mediaItems.length === 0) {
+        showToast('Apresentação vazia', 'warn');
+        return;
+    }
+    const projectData = {
+        version: '2.0.0',
+        savedAt: new Date().toISOString(),
+        mediaItems: mediaItems,
+        playlist: playlist,
+        settings: settings
+    };
+
+    const result = await window.electronAPI.saveProjectFile(projectData);
+    if (result.success) {
+        showToast('Projeto salvo com sucesso!', 'success');
+        exportModal.classList.add('hidden');
+    }
+};
+
+// 3. Load Project (.lumina)
+async function handleLoadProject() {
+    const result = await window.electronAPI.loadProjectFile();
+    if (result && result.success && result.projectData) {
+        const data = result.projectData;
+        if (data.mediaItems && data.mediaItems.length > 0) {
+            addMediaItems(data.mediaItems, true);
+        }
+        if (data.playlist && Array.isArray(data.playlist)) {
+            playlist = data.playlist;
+            renderPlaylist();
+            if (playlist.length > 0) playTrack(0);
+        }
+        if (data.settings) {
+            settings = { ...settings, ...data.settings };
+            applySettingsToUI();
+            saveSettingsToStorage();
+        }
+        showToast('Projeto carregado com sucesso!', 'success');
+        exportModal.classList.add('hidden');
+    } else if (result && result.message) {
+        showToast(result.message, 'error');
+    }
+}
+
+loadProjectActionBtn.onclick = handleLoadProject;
+
+// 4. Save current image snapshot
+saveCurrentActionBtn.onclick = async () => {
+    if (mediaItems.length === 0) {
+        showToast('Nenhuma mídia exibida', 'warn');
+        return;
+    }
+    const current = mediaItems[currentIndex];
+    if (current.type === 'video') {
+        showToast('Para vídeos, utilize a exportação de pasta', 'info');
+        return;
+    }
+
+    try {
+        const canvas = document.createElement('canvas');
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = toFileUrl(current.path);
+
+        img.onload = async () => {
+            const isRotated90 = currentRotation === 90 || currentRotation === 270;
+            canvas.width = isRotated90 ? img.naturalHeight : img.naturalWidth;
+            canvas.height = isRotated90 ? img.naturalWidth : img.naturalHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.filter = activeFilter !== 'none' ? activeFilter : 'none';
+
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate((currentRotation * Math.PI) / 180);
+            ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+
+            const dataUrl = canvas.toDataURL('image/png');
+            const result = await window.electronAPI.saveImageFile(dataUrl, `lumina_${current.name}`);
+            if (result && result.success) {
+                showToast('Imagem salva com sucesso!', 'success');
+                exportModal.classList.add('hidden');
+            }
+        };
+    } catch (e) {
+        console.error('Save current image error:', e);
+        showToast('Erro ao capturar imagem', 'error');
+    }
+};
+
+// ==========================================================================
 // BACKGROUND AUDIO & PLAYLIST
 // ==========================================================================
 playlistBtn.onclick = () => playlistModal.classList.toggle('hidden');
@@ -1276,7 +1405,7 @@ closeExif.onclick = () => exifCard.classList.add('hidden');
 
 // ==========================================================================
 // SETTINGS SCREEN LOGIC
-// ==========================================================
+// ==========================================================================
 settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
 backBtn.onclick = () => settingsScreen.classList.add('hidden');
 
@@ -1414,7 +1543,8 @@ document.addEventListener('keydown', (e) => {
             if (mediaItems.length > 0) showMedia(mediaItems.length - 1);
             break;
         case 'Escape':
-            if (!gridModal.classList.contains('hidden')) closeGridModal();
+            if (!exportModal.classList.contains('hidden')) exportModal.classList.add('hidden');
+            else if (!gridModal.classList.contains('hidden')) closeGridModal();
             else if (!settingsScreen.classList.contains('hidden')) settingsScreen.classList.add('hidden');
             else if (!playlistModal.classList.contains('hidden')) playlistModal.classList.add('hidden');
             else if (!exifCard.classList.contains('hidden')) exifCard.classList.add('hidden');

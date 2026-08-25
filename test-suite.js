@@ -118,6 +118,10 @@ const ipcChannels = [
     'close-presentation',
     'get-projection-status',
     'toggle-fullscreen-main',
+    'export-reordered-folder',
+    'save-project-file',
+    'load-project-file',
+    'save-image-file',
     'navigate-next',
     'navigate-prev'
 ];
