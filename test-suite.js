@@ -119,6 +119,8 @@ const ipcChannels = [
     'get-projection-status',
     'toggle-fullscreen-main',
     'export-reordered-folder',
+    'export-pptx',
+    'export-pdf',
     'save-project-file',
     'load-project-file',
     'save-image-file',

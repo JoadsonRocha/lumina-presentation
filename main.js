@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, screen, globalShortcut, Menu, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const pptxgen = require('pptxgenjs');
 const path = require('path');
 const fs = require('fs');
 
@@ -497,5 +498,155 @@ ipcMain.handle('save-image-file', async (event, { dataUrl, defaultName }) => {
         return { success: true, filePath, message: 'Imagem salva com sucesso' };
     } catch (err) {
         return { success: false, message: err.message };
+    }
+});
+
+// IPC: Export to PowerPoint (.pptx)
+ipcMain.handle('export-pptx', async (event, items) => {
+    if (!items || items.length === 0) return { success: false, message: 'Nenhuma mídia para exportar' };
+
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Exportar Apresentação para PowerPoint (.pptx)',
+        defaultPath: 'apresentacao.pptx',
+        filters: [{ name: 'Apresentação PowerPoint (*.pptx)', extensions: ['pptx'] }]
+    });
+
+    if (canceled || !filePath) return { success: false, message: 'Exportação cancelada' };
+
+    try {
+        const pres = new pptxgen();
+        pres.layout = 'LAYOUT_16x9';
+        pres.author = 'Lumina Presentation';
+        pres.title = 'Apresentação Lumina';
+
+        for (const item of items) {
+            const slide = pres.addSlide();
+            slide.background = { color: '000000' };
+
+            if (item.type === 'image' && fs.existsSync(item.path)) {
+                slide.addImage({
+                    path: item.path,
+                    x: 0,
+                    y: 0,
+                    w: '100%',
+                    h: '100%',
+                    sizing: { type: 'contain', w: '100%', h: '100%' }
+                });
+            } else if (item.type === 'video') {
+                slide.addText(`🎬 Vídeo: ${item.name}`, {
+                    x: 1,
+                    y: 3.2,
+                    w: 8,
+                    h: 1.5,
+                    color: 'FFFFFF',
+                    fontSize: 24,
+                    align: 'center'
+                });
+            }
+        }
+
+        await pres.writeFile({ fileName: filePath });
+        return { success: true, filePath, message: 'Apresentação PowerPoint (.pptx) gerada com sucesso!' };
+    } catch (err) {
+        console.error('PPTX Export error:', err);
+        return { success: false, message: 'Erro ao gerar PPTX: ' + err.message };
+    }
+});
+
+// IPC: Export to PDF Document (.pdf)
+ipcMain.handle('export-pdf', async (event, items) => {
+    if (!items || items.length === 0) return { success: false, message: 'Nenhuma mídia para exportar' };
+
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Exportar Apresentação para PDF (.pdf)',
+        defaultPath: 'apresentacao.pdf',
+        filters: [{ name: 'Documento PDF (*.pdf)', extensions: ['pdf'] }]
+    });
+
+    if (canceled || !filePath) return { success: false, message: 'Exportação cancelada' };
+
+    let pdfWin = null;
+    try {
+        const slidesHtml = items.map(item => {
+            if (item.type === 'image') {
+                const imgUri = 'file:///' + item.path.replace(/\\/g, '/');
+                return `<div class="slide"><img src="${imgUri}" alt="${item.name}"></div>`;
+            } else {
+                return `<div class="slide"><div class="video-card">🎬 ${item.name}</div></div>`;
+            }
+        }).join('\n');
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: 297mm 167.06mm; /* 16:9 Landscape */
+    margin: 0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000000; }
+  .slide {
+    width: 100vw;
+    height: 100vh;
+    page-break-after: always;
+    page-break-inside: avoid;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000000;
+    overflow: hidden;
+  }
+  .slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .video-card {
+    color: #ffffff;
+    font-family: sans-serif;
+    font-size: 32px;
+    font-weight: bold;
+    background: #18181c;
+    padding: 30px 60px;
+    border-radius: 16px;
+    border: 1px solid #333;
+  }
+</style>
+</head>
+<body>
+  ${slidesHtml}
+</body>
+</html>`;
+
+        pdfWin = new BrowserWindow({
+            show: false,
+            width: 1920,
+            height: 1080,
+            webPreferences: {
+                webSecurity: false
+            }
+        });
+
+        await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const pdfBuffer = await pdfWin.webContents.printToPDF({
+            landscape: true,
+            printBackground: true,
+            margins: { marginType: 'none' }
+        });
+
+        await fs.promises.writeFile(filePath, pdfBuffer);
+        return { success: true, filePath, message: 'Documento PDF (.pdf) gerado com sucesso!' };
+    } catch (err) {
+        console.error('PDF Export error:', err);
+        return { success: false, message: 'Erro ao gerar PDF: ' + err.message };
+    } finally {
+        if (pdfWin && !pdfWin.isDestroyed()) {
+            pdfWin.close();
+        }
     }
 });

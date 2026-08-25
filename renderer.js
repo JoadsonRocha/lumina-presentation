@@ -133,6 +133,8 @@ const closeExportBtn = document.getElementById('closeExportBtn');
 const exportFolderActionBtn = document.getElementById('exportFolderActionBtn');
 const saveProjectActionBtn = document.getElementById('saveProjectActionBtn');
 const loadProjectActionBtn = document.getElementById('loadProjectActionBtn');
+const exportPptxActionBtn = document.getElementById('exportPptxActionBtn');
+const exportPdfActionBtn = document.getElementById('exportPdfActionBtn');
 const saveCurrentActionBtn = document.getElementById('saveCurrentActionBtn');
 
 // Audio & Playlist Elements
@@ -1186,7 +1188,43 @@ async function handleLoadProject() {
 
 loadProjectActionBtn.onclick = handleLoadProject;
 
-// 4. Save current image snapshot
+// 4. Export PowerPoint (.pptx)
+if (exportPptxActionBtn) {
+    exportPptxActionBtn.onclick = async () => {
+        if (mediaItems.length === 0) {
+            showToast('Nenhuma mídia para exportar', 'warn');
+            return;
+        }
+        showToast('Gerando arquivo PowerPoint (.pptx)...', 'info');
+        const result = await window.electronAPI.exportPptx(mediaItems);
+        if (result && result.success) {
+            showToast(result.message, 'success');
+            exportModal.classList.add('hidden');
+        } else if (result && result.message) {
+            showToast(result.message, 'warn');
+        }
+    };
+}
+
+// 5. Export PDF (.pdf)
+if (exportPdfActionBtn) {
+    exportPdfActionBtn.onclick = async () => {
+        if (mediaItems.length === 0) {
+            showToast('Nenhuma mídia para exportar', 'warn');
+            return;
+        }
+        showToast('Gerando documento PDF (.pdf)...', 'info');
+        const result = await window.electronAPI.exportPdf(mediaItems);
+        if (result && result.success) {
+            showToast(result.message, 'success');
+            exportModal.classList.add('hidden');
+        } else if (result && result.message) {
+            showToast(result.message, 'warn');
+        }
+    };
+}
+
+// 6. Save current image snapshot
 saveCurrentActionBtn.onclick = async () => {
     if (mediaItems.length === 0) {
         showToast('Nenhuma mídia exibida', 'warn');
@@ -1194,7 +1232,7 @@ saveCurrentActionBtn.onclick = async () => {
     }
     const current = mediaItems[currentIndex];
     if (current.type === 'video') {
-        showToast('Para vídeos, utilize a exportação de pasta', 'info');
+        showToast('Para vídeos, utilize a exportação de pasta ou PPTX', 'info');
         return;
     }
 

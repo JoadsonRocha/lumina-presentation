@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Export & Projects
     exportReorderedFolder: (items) => ipcRenderer.invoke('export-reordered-folder', items),
+    exportPptx: (items) => ipcRenderer.invoke('export-pptx', items),
+    exportPdf: (items) => ipcRenderer.invoke('export-pdf', items),
     saveProjectFile: (projectData) => ipcRenderer.invoke('save-project-file', projectData),
     loadProjectFile: () => ipcRenderer.invoke('load-project-file'),
     saveImageFile: (dataUrl, defaultName) => ipcRenderer.invoke('save-image-file', { dataUrl, defaultName }),
