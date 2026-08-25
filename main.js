@@ -6,8 +6,11 @@ const fs = require('fs');
 // Ensure single instance lock to prevent cache locking conflicts
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-    app.quit();
+    process.exit(0);
 }
+
+// Disable problematic disk cache flags on Windows
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
 // Disable default menu
 Menu.setApplicationMenu(null);
@@ -266,8 +269,10 @@ ipcMain.handle('select-audio', async () => {
 
 // IPC: Dragged paths
 ipcMain.handle('parse-dropped-paths', async (event, paths) => {
+    if (!Array.isArray(paths)) return [];
     const mediaList = [];
     for (const itemPath of paths) {
+        if (!itemPath || typeof itemPath !== 'string' || !itemPath.trim()) continue;
         try {
             const stats = await fs.promises.stat(itemPath);
             if (stats.isDirectory()) {

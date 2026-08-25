@@ -10,6 +10,7 @@ let slideshowInterval = null;
 let progressInterval = null;
 let progress = 0;
 let idleTimer = null;
+let draggedMediaIndex = null;
 
 // Stage & Modifiers
 let activeFilter = 'none';
@@ -319,8 +320,10 @@ function loadMediaList(newItems) {
     showToast(`${imgCount} foto(s), ${vidCount} vídeo(s) carregados`, 'success');
 }
 
-// Drag & Drop
+// Drag & Drop to Import Files
 dropZone.addEventListener('dragover', (e) => {
+    // If dragging an internal thumbnail, let the thumbnail drop handler manage it
+    if (draggedMediaIndex !== null) return;
     e.preventDefault();
     e.stopPropagation();
     const dropBox = document.querySelector('.drop-hint-box');
@@ -328,18 +331,20 @@ dropZone.addEventListener('dragover', (e) => {
 });
 
 dropZone.addEventListener('dragleave', (e) => {
+    if (draggedMediaIndex !== null) return;
     e.preventDefault();
     const dropBox = document.querySelector('.drop-hint-box');
     if (dropBox) dropBox.classList.remove('drag-over');
 });
 
 dropZone.addEventListener('drop', async (e) => {
+    if (draggedMediaIndex !== null) return;
     e.preventDefault();
     e.stopPropagation();
     const dropBox = document.querySelector('.drop-hint-box');
     if (dropBox) dropBox.classList.remove('drag-over');
 
-    const rawFiles = Array.from(e.dataTransfer.files);
+    const rawFiles = Array.from(e.dataTransfer.files || []);
     if (rawFiles.length === 0) return;
 
     const filePaths = rawFiles.map(f => f.path);
@@ -351,6 +356,33 @@ dropZone.addEventListener('drop', async (e) => {
         showToast('Nenhum arquivo compatível encontrado', 'warn');
     }
 });
+
+// ==========================================================================
+// REORDER MEDIA ENGINE (DRAG & DROP REORDERING)
+// ==========================================================================
+function reorderMedia(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= mediaItems.length || toIndex >= mediaItems.length) return;
+    
+    const [movedItem] = mediaItems.splice(fromIndex, 1);
+    mediaItems.splice(toIndex, 0, movedItem);
+
+    // If active slide was moved, update currentIndex
+    if (currentIndex === fromIndex) {
+        currentIndex = toIndex;
+    } else if (fromIndex < currentIndex && toIndex >= currentIndex) {
+        currentIndex--;
+    } else if (fromIndex > currentIndex && toIndex <= currentIndex) {
+        currentIndex++;
+    }
+
+    renderThumbnails();
+    if (!gridModal.classList.contains('hidden')) {
+        renderGridCards();
+    }
+    updateNextUpCard();
+    syncToProjection();
+    showToast(`Posição atualizada para #${toIndex + 1}`);
+}
 
 // ==========================================================================
 // SIDEBAR THUMBNAILS
@@ -369,6 +401,7 @@ function renderThumbnails() {
     filteredItems.forEach((item) => {
         const thumb = document.createElement('div');
         thumb.className = `thumb-item ${item.originalIndex === currentIndex ? 'active' : ''}`;
+        thumb.draggable = true;
         
         const src = toFileUrl(item.path);
         if (item.type === 'video') {
@@ -384,7 +417,56 @@ function renderThumbnails() {
             `;
         }
 
-        thumb.onclick = () => showMedia(item.originalIndex);
+        // Click to display
+        thumb.onclick = (e) => {
+            showMedia(item.originalIndex);
+        };
+
+        // Drag & Drop Reordering Listeners
+        thumb.addEventListener('dragstart', (e) => {
+            draggedMediaIndex = item.originalIndex;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', item.originalIndex);
+            setTimeout(() => thumb.classList.add('dragging'), 0);
+        });
+
+        thumb.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const rect = thumb.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                thumb.classList.add('drag-over-top');
+                thumb.classList.remove('drag-over-bottom');
+            } else {
+                thumb.classList.add('drag-over-bottom');
+                thumb.classList.remove('drag-over-top');
+            }
+        });
+
+        thumb.addEventListener('dragleave', () => {
+            thumb.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+
+        thumb.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            thumb.classList.remove('drag-over-top', 'drag-over-bottom');
+            
+            if (draggedMediaIndex === null) return;
+            
+            reorderMedia(draggedMediaIndex, item.originalIndex);
+            draggedMediaIndex = null;
+        });
+
+        thumb.addEventListener('dragend', () => {
+            thumb.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+            document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom'));
+            draggedMediaIndex = null;
+        });
+
         thumbList.appendChild(thumb);
     });
 }
@@ -842,7 +924,7 @@ function resetZoom() {
 }
 
 // ==========================================================================
-// GRID OVERVIEW MODAL (MODO GRADE)
+// GRID OVERVIEW MODAL (MODO GRADE COM DRAG & DROP)
 // ==========================================================================
 function openGridModal() {
     if (mediaItems.length === 0) return;
@@ -892,6 +974,7 @@ function renderGridCards() {
 
         const card = document.createElement('div');
         card.className = `grid-card ${index === currentIndex ? 'active' : ''}`;
+        card.draggable = true;
         
         const src = toFileUrl(item.path);
         const isVideo = item.type === 'video';
@@ -917,6 +1000,41 @@ function renderGridCards() {
             showMedia(index);
             closeGridModal();
         };
+
+        // Drag & Drop inside Grid
+        card.addEventListener('dragstart', (e) => {
+            draggedMediaIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', index);
+            setTimeout(() => card.classList.add('dragging'), 0);
+        });
+
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            card.classList.add('drag-over');
+        });
+
+        card.addEventListener('dragleave', () => {
+            card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            card.classList.remove('drag-over');
+            
+            if (draggedMediaIndex !== null) {
+                reorderMedia(draggedMediaIndex, index);
+                draggedMediaIndex = null;
+            }
+        });
+
+        card.addEventListener('dragend', () => {
+            document.querySelectorAll('.grid-card').forEach(c => c.classList.remove('dragging', 'drag-over'));
+            draggedMediaIndex = null;
+        });
 
         gridContent.appendChild(card);
     });
