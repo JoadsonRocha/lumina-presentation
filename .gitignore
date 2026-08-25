@@ -7,10 +7,16 @@ dist/
 build/
 out/
 *.exe
+*.msi
 *.dmg
 *.AppImage
 *.deb
 *.rpm
+*.pfx
+*.cer
+*.key
+cert.pfx
+create-cert.ps1
 
 # Logs
 npm-debug.log*

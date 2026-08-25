@@ -5,7 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node test-suite.js"
+    "test": "node test-suite.js",
+    "dist": "electron-builder",
+    "dist:msi": "electron-builder --win msi",
+    "dist:exe": "electron-builder --win nsis"
   },
   "keywords": [
     "presentation",
@@ -14,9 +17,14 @@
     "video-player",
     "electron",
     "dual-screen",
-    "glassmorphism"
-  ],
-  "author": "Joadson Rocha",
+  "author": {
+    "name": "Joadson Rocha",
+    "url": "https://github.com/joadsonrocha"
+  },
+  "homepage": "https://github.com/joadsonrocha/lumina-presentation#readme",
+  "bugs": {
+    "url": "https://github.com/joadsonrocha/lumina-presentation/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +32,31 @@
   },
   "build": {
     "appId": "com.joadsonrocha.lumina",
-    "productName": "Lumina",
+    "productName": "Lumina Presentation",
+    "copyright": "Copyright © 2026 Joadson Rocha. Todos os direitos reservados.",
+    "win": {
+      "target": [
+        "nsis",
+        "msi"
+      ],
+      "publisherName": "Joadson Rocha",
+      "legalTrademarks": "Lumina Presentation™ por Joadson Rocha",
+      "requestedExecutionLevel": "asInvoker",
+      "certificateFile": "cert.pfx",
+      "certificatePassword": "Lumina2026!"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "runAfterFinish": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lumina Presentation"
+    },
     "publish": [
       {
         "provider": "github",
@@ -35,7 +67,8 @@
   },
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^41.5.0"
+    "electron": "^41.5.0",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",
