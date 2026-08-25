@@ -103,6 +103,7 @@ const thumbList = document.getElementById('thumbList');
 const mediaCountBadge = document.getElementById('mediaCountBadge');
 const sidebarSortBtn = document.getElementById('sidebarSortBtn');
 const sidebarAddBtn = document.getElementById('sidebarAddBtn');
+const sidebarClearBtn = document.getElementById('sidebarClearBtn');
 const sidebarTabs = document.querySelectorAll('.tab-btn');
 
 // Stage Tools
@@ -262,67 +263,106 @@ function showToast(message, type = 'info') {
 }
 
 // ==========================================================================
-// MEDIA IMPORT & LOADING
+// MEDIA IMPORT & APPENDING (PRESERVES EXISTING MEDIA)
 // ==========================================================================
-async function handleSelectMedia() {
+async function handleSelectMedia(replace = false) {
     const items = await window.electronAPI.selectMedia();
     if (items && items.length > 0) {
-        loadMediaList(items);
+        addMediaItems(items, replace);
     }
 }
 
-async function handleSelectFolder() {
+async function handleSelectFolder(replace = false) {
     showToast('Lendo pasta...', 'info');
     const items = await window.electronAPI.selectFolder();
     if (items && items.length > 0) {
-        loadMediaList(items);
-        showToast(`${items.length} itens carregados da pasta`, 'success');
+        addMediaItems(items, replace);
     } else {
         showToast('Nenhum arquivo compatível encontrado na pasta', 'warn');
     }
 }
 
-selectBtn.onclick = handleSelectMedia;
-welcomeSelectBtn.onclick = handleSelectMedia;
-importFolderBtn.onclick = handleSelectFolder;
-welcomeFolderBtn.onclick = handleSelectFolder;
-sidebarAddBtn.onclick = handleSelectMedia;
+welcomeSelectBtn.onclick = () => handleSelectMedia(true);
+welcomeFolderBtn.onclick = () => handleSelectFolder(true);
 
-function loadMediaList(newItems) {
+selectBtn.onclick = () => handleSelectMedia(false);
+importFolderBtn.onclick = () => handleSelectFolder(false);
+sidebarAddBtn.onclick = () => handleSelectMedia(false);
+
+if (sidebarClearBtn) {
+    sidebarClearBtn.onclick = clearPresentation;
+}
+
+function addMediaItems(newItems, replace = false) {
     if (!newItems || newItems.length === 0) return;
-    
-    mediaItems = newItems.map(item => ({
-        ...item,
-        rotation: 0
-    }));
 
+    if (replace || mediaItems.length === 0) {
+        mediaItems = newItems.map(item => ({
+            ...item,
+            rotation: 0
+        }));
+        currentIndex = 0;
+        currentRotation = 0;
+        activeFilter = 'none';
+        blackoutActive = false;
+        whiteoutActive = false;
+        stageBlackout.classList.remove('active');
+        stageWhiteout.classList.remove('active');
+
+        welcomeScreen.classList.add('hidden');
+        viewerScreen.classList.remove('hidden');
+        gridModeBtn.classList.remove('hidden');
+        playlistBtn.classList.remove('hidden');
+
+        renderThumbnails();
+        showMedia(currentIndex);
+        startPresentationTimer();
+        resetIdleTimer();
+
+        const imgCount = mediaItems.filter(m => m.type === 'image').length;
+        const vidCount = mediaItems.filter(m => m.type === 'video').length;
+        showToast(`${imgCount} foto(s), ${vidCount} vídeo(s) carregados`, 'success');
+    } else {
+        // APPEND to existing media without duplicating identical paths
+        const existingPaths = new Set(mediaItems.map(m => m.path));
+        const uniqueNewItems = newItems
+            .filter(item => !existingPaths.has(item.path))
+            .map(item => ({
+                ...item,
+                rotation: 0
+            }));
+
+        if (uniqueNewItems.length === 0) {
+            showToast('As mídias selecionadas já estão na apresentação', 'info');
+            return;
+        }
+
+        mediaItems.push(...uniqueNewItems);
+        renderThumbnails();
+        if (!gridModal.classList.contains('hidden')) {
+            renderGridCards();
+        }
+        updateNextUpCard();
+        counter.textContent = `${currentIndex + 1} / ${mediaItems.length}`;
+        showToast(`${uniqueNewItems.length} nova(s) mídia(s) adicionada(s)! Total: ${mediaItems.length}`, 'success');
+    }
+}
+
+function clearPresentation() {
+    if (mediaItems.length === 0) return;
+    mediaItems = [];
     currentIndex = 0;
-    currentRotation = 0;
-    activeFilter = 'none';
-    blackoutActive = false;
-    whiteoutActive = false;
-    stageBlackout.classList.remove('active');
-    stageWhiteout.classList.remove('active');
-
-    // UI Updates
-    welcomeScreen.classList.add('hidden');
-    viewerScreen.classList.remove('hidden');
-    gridModeBtn.classList.remove('hidden');
-    playlistBtn.classList.remove('hidden');
-
-    renderThumbnails();
-    showMedia(currentIndex);
-    startPresentationTimer();
-    resetIdleTimer();
-
-    const imgCount = mediaItems.filter(m => m.type === 'image').length;
-    const vidCount = mediaItems.filter(m => m.type === 'video').length;
-    showToast(`${imgCount} foto(s), ${vidCount} vídeo(s) carregados`, 'success');
+    if (isPlaying) toggleSlideshow();
+    welcomeScreen.classList.remove('hidden');
+    viewerScreen.classList.add('hidden');
+    gridModeBtn.classList.add('hidden');
+    playlistBtn.classList.add('hidden');
+    syncToProjection();
+    showToast('Apresentação limpa', 'info');
 }
 
 // Drag & Drop to Import Files
 dropZone.addEventListener('dragover', (e) => {
-    // If dragging an internal thumbnail, let the thumbnail drop handler manage it
     if (draggedMediaIndex !== null) return;
     e.preventDefault();
     e.stopPropagation();
@@ -344,14 +384,20 @@ dropZone.addEventListener('drop', async (e) => {
     const dropBox = document.querySelector('.drop-hint-box');
     if (dropBox) dropBox.classList.remove('drag-over');
 
+    if (!e.dataTransfer || !e.dataTransfer.files) return;
     const rawFiles = Array.from(e.dataTransfer.files || []);
     if (rawFiles.length === 0) return;
 
-    const filePaths = rawFiles.map(f => f.path);
+    const filePaths = rawFiles
+        .map(f => f.path)
+        .filter(p => typeof p === 'string' && p.trim().length > 0);
+        
+    if (filePaths.length === 0) return;
+
     const parsedMedia = await window.electronAPI.parseDroppedPaths(filePaths);
 
     if (parsedMedia && parsedMedia.length > 0) {
-        loadMediaList(parsedMedia);
+        addMediaItems(parsedMedia, mediaItems.length === 0);
     } else {
         showToast('Nenhum arquivo compatível encontrado', 'warn');
     }
@@ -418,7 +464,7 @@ function renderThumbnails() {
         }
 
         // Click to display
-        thumb.onclick = (e) => {
+        thumb.onclick = () => {
             showMedia(item.originalIndex);
         };
 
@@ -1043,8 +1089,7 @@ function renderGridCards() {
 function removeMediaItem(index) {
     mediaItems.splice(index, 1);
     if (mediaItems.length === 0) {
-        welcomeScreen.classList.remove('hidden');
-        viewerScreen.classList.add('hidden');
+        clearPresentation();
         closeGridModal();
         return;
     }
@@ -1231,7 +1276,7 @@ closeExif.onclick = () => exifCard.classList.add('hidden');
 
 // ==========================================================================
 // SETTINGS SCREEN LOGIC
-// ==========================================================================
+// ==========================================================
 settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
 backBtn.onclick = () => settingsScreen.classList.add('hidden');
 
