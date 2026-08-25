@@ -17,6 +17,8 @@
     "video-player",
     "electron",
     "dual-screen",
+    "glassmorphism"
+  ],
   "author": {
     "name": "Joadson Rocha",
     "url": "https://github.com/joadsonrocha"

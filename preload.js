@@ -37,6 +37,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     loadProjectFile: () => ipcRenderer.invoke('load-project-file'),
     saveImageFile: (dataUrl, defaultName) => ipcRenderer.invoke('save-image-file', { dataUrl, defaultName }),
 
+    // App & Developer Info
+    getAppInfo: () => ipcRenderer.invoke('get-app-info'),
+
     // Updates & Shell
     checkForUpdates: () => ipcRenderer.send('check-for-updates'),
     onUpdateMessage: (callback) => ipcRenderer.on('update-message', (event, data) => callback(data)),

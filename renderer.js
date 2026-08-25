@@ -1471,15 +1471,78 @@ saveSettingsBtn.onclick = () => {
     settingsScreen.classList.add('hidden');
 };
 
-updateBtn.onclick = () => {
-    updateBtn.textContent = 'Verificando...';
-    window.electronAPI.checkForUpdates();
-};
+// ==========================================================================
+// ABOUT & DEVELOPER MODAL
+// ==========================================================================
+const aboutBtn = document.getElementById('aboutBtn');
+const aboutModal = document.getElementById('aboutModal');
+const closeAboutBtn = document.getElementById('closeAboutBtn');
+const openPortfolioBtn = document.getElementById('openPortfolioBtn');
+const openGithubBtn = document.getElementById('openGithubBtn');
+const openSupportBtn = document.getElementById('openSupportBtn');
+const copyDiagnosticsBtn = document.getElementById('copyDiagnosticsBtn');
 
-window.electronAPI.onUpdateMessage((data) => {
-    updateBtn.textContent = 'Verificar Atualizações';
-    showToast(data.message, data.status === 'error' ? 'error' : 'info');
-});
+const electronVer = document.getElementById('electronVer');
+const chromeVer = document.getElementById('chromeVer');
+const nodeVer = document.getElementById('nodeVer');
+const osVer = document.getElementById('osVer');
+
+let appDiagnostics = null;
+
+async function loadAppInfo() {
+    try {
+        appDiagnostics = await window.electronAPI.getAppInfo();
+        if (appDiagnostics) {
+            if (electronVer) electronVer.textContent = `v${appDiagnostics.electron}`;
+            if (chromeVer) chromeVer.textContent = `v${appDiagnostics.chrome}`;
+            if (nodeVer) nodeVer.textContent = `v${appDiagnostics.node}`;
+            if (osVer) osVer.textContent = appDiagnostics.os;
+        }
+    } catch (err) {
+        console.error('Error fetching app info:', err);
+    }
+}
+
+loadAppInfo();
+
+if (aboutBtn) {
+    aboutBtn.onclick = () => {
+        aboutModal.classList.remove('hidden');
+    };
+}
+
+if (closeAboutBtn) {
+    closeAboutBtn.onclick = () => {
+        aboutModal.classList.add('hidden');
+    };
+}
+
+if (openPortfolioBtn) {
+    openPortfolioBtn.onclick = () => {
+        window.electronAPI.openUrl('https://joadsonrocha.github.io/');
+    };
+}
+
+if (openGithubBtn) {
+    openGithubBtn.onclick = () => {
+        window.electronAPI.openUrl('https://github.com/joadsonrocha/lumina-presentation');
+    };
+}
+
+if (openSupportBtn) {
+    openSupportBtn.onclick = () => {
+        window.electronAPI.openUrl('https://github.com/joadsonrocha');
+    };
+}
+
+if (copyDiagnosticsBtn) {
+    copyDiagnosticsBtn.onclick = () => {
+        if (!appDiagnostics) return;
+        const text = `Lumina Presentation 2.0\nDesenvolvedor: Joadson Rocha\nElectron: ${appDiagnostics.electron}\nChromium: ${appDiagnostics.chrome}\nNode.js: ${appDiagnostics.node}\nV8: ${appDiagnostics.v8}\nOS: ${appDiagnostics.os}`;
+        navigator.clipboard.writeText(text);
+        showToast('Diagnóstico copiado para a área de transferência!', 'success');
+    };
+}
 
 // ==========================================================================
 // DUAL SCREEN PROJECTION & FULLSCREEN
@@ -1581,7 +1644,8 @@ document.addEventListener('keydown', (e) => {
             if (mediaItems.length > 0) showMedia(mediaItems.length - 1);
             break;
         case 'Escape':
-            if (!exportModal.classList.contains('hidden')) exportModal.classList.add('hidden');
+            if (!aboutModal.classList.contains('hidden')) aboutModal.classList.add('hidden');
+            else if (!exportModal.classList.contains('hidden')) exportModal.classList.add('hidden');
             else if (!gridModal.classList.contains('hidden')) closeGridModal();
             else if (!settingsScreen.classList.contains('hidden')) settingsScreen.classList.add('hidden');
             else if (!playlistModal.classList.contains('hidden')) playlistModal.classList.add('hidden');

@@ -124,6 +124,7 @@ const ipcChannels = [
     'save-project-file',
     'load-project-file',
     'save-image-file',
+    'get-app-info',
     'navigate-next',
     'navigate-prev'
 ];

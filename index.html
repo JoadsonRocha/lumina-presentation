@@ -427,8 +427,77 @@
                     </div>
 
                     <div class="settings-footer">
-                        <button id="updateBtn" class="btn-text">Verificar Atualizações</button>
+                        <div class="footer-left-actions">
+                            <button id="aboutBtn" class="btn-text" title="Informações sobre o Desenvolvedor e Versão">
+                                👨‍💻 Sobre o Desenvolvedor
+                            </button>
+                            <button id="updateBtn" class="btn-text">Verificar Atualizações</button>
+                        </div>
                         <button id="saveSettings" class="btn primary">Salvar Preferências</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About & Developer Modal -->
+            <div id="aboutModal" class="about-modal hidden">
+                <div class="about-container">
+                    <div class="about-header">
+                        <div class="about-brand">
+                            <img src="logo.png" alt="Lumina Logo" class="about-logo">
+                            <div class="about-brand-text">
+                                <h3>Lumina Presentation</h3>
+                                <span class="badge-version">v2.0.0 PRO</span>
+                            </div>
+                        </div>
+                        <button id="closeAboutBtn" class="close-btn-sm">&times;</button>
+                    </div>
+
+                    <!-- Developer Card -->
+                    <div class="developer-card">
+                        <div class="dev-avatar">👨‍💻</div>
+                        <div class="dev-info">
+                            <h4 id="devName">Joadson Rocha</h4>
+                            <span class="dev-role">Engenheiro de Software & Criador do Projeto</span>
+                            <p class="dev-bio">Desenvolvido com foco em alta performance, interfaces limpas e suporte a apresentações cinematográficas em múltiplos monitores.</p>
+                        </div>
+                    </div>
+
+                    <!-- Developer Links -->
+                    <div class="dev-links-grid">
+                        <button class="dev-link-btn" id="openPortfolioBtn">
+                            <span>🌐</span> Portfólio Web
+                        </button>
+                        <button class="dev-link-btn" id="openGithubBtn">
+                            <span>🐙</span> GitHub
+                        </button>
+                        <button class="dev-link-btn" id="openSupportBtn">
+                            <span>☕</span> Apoiar Projeto
+                        </button>
+                    </div>
+
+                    <!-- System & Tech Specs -->
+                    <div class="tech-specs-box">
+                        <div class="tech-item">
+                            <span class="tech-label">Electron</span>
+                            <span id="electronVer" class="tech-value">v41.5.0</span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Chromium</span>
+                            <span id="chromeVer" class="tech-value">-</span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Node.js</span>
+                            <span id="nodeVer" class="tech-value">-</span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Plataforma</span>
+                            <span id="osVer" class="tech-value">-</span>
+                        </div>
+                    </div>
+
+                    <div class="about-footer">
+                        <span class="copyright-text">Copyright © 2026 Joadson Rocha. Licença MIT.</span>
+                        <button id="copyDiagnosticsBtn" class="btn-micro" title="Copiar diagnóstico para suporte">📋</button>
                     </div>
                 </div>
             </div>

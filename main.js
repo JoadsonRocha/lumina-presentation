@@ -385,13 +385,20 @@ autoUpdater.on('update-not-available', () => {
     }
 });
 
-autoUpdater.on('error', (err) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-message', {
-            status: 'error',
-            message: 'Erro ao verificar atualizações: ' + err.message
-        });
-    }
+// IPC: App & Developer Info
+ipcMain.handle('get-app-info', () => {
+    return {
+        name: 'Lumina Presentation',
+        version: app.getVersion() || '2.0.0',
+        author: 'Joadson Rocha',
+        authorUrl: 'https://github.com/joadsonrocha',
+        repoUrl: 'https://github.com/joadsonrocha/lumina-presentation',
+        electron: process.versions.electron,
+        chrome: process.versions.chrome,
+        node: process.versions.node,
+        v8: process.versions.v8,
+        os: `${process.platform} (${process.arch})`
+    };
 });
 
 // IPC: Export Reordered Folder
