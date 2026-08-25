@@ -3,89 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' file: data:; font-src 'self' https://fonts.gstatic.com; media-src 'self' blob:;">
-    <title>Lumina - Apresentação de Imagens</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' file: data: blob:; font-src 'self' https://fonts.gstatic.com; media-src 'self' file: blob: data:;">
+    <title>Lumina 2.0 - Apresentador Profissional de Mídias</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="node_modules/exifr/dist/full.umd.js"></script>
 </head>
 <body id="dropZone">
+    <!-- Slideshow Progress Bar -->
     <div id="slideshowProgress" class="progress-bar"></div>
+
+    <!-- Toast Notifications System -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <div class="app-container">
+        <!-- Header -->
         <header>
             <div class="logo">
                 <img src="logo.png" alt="Lumina Logo">
-                <h1>Lumina</h1>
-            </div>
-            <div class="actions">
-                <div id="musicPlayer" class="music-player hidden">
-                    <button id="musicPlayPause" class="btn-sm">⏸</button>
-                    <button id="musicStop" class="btn-sm">⏹</button>
-                    <span id="musicName" class="music-name">Musica...</span>
+                <div class="logo-text">
+                    <h1>Lumina</h1>
+                    <span class="badge-version">2.0 PRO</span>
                 </div>
-                <button id="musicBtn" class="btn-icon hidden" title="Música de Fundo">
+            </div>
+
+            <!-- Header Stage / Presentation Status -->
+            <div id="projectionStatusBadge" class="projection-badge hidden">
+                <span class="pulse-dot"></span>
+                <span>Projetando na 2ª Tela</span>
+            </div>
+
+            <div class="actions">
+                <!-- Audio Player Header Widget -->
+                <div id="musicPlayer" class="music-player hidden">
+                    <button id="musicPrevBtn" class="btn-mini" title="Música Anterior">⏮</button>
+                    <button id="musicPlayPause" class="btn-mini" title="Play/Pause Música">⏸</button>
+                    <button id="musicNextBtn" class="btn-mini" title="Próxima Música">⏭</button>
+                    <span id="musicName" class="music-name">Música...</span>
+                    <div class="volume-control">
+                        <span class="vol-icon" id="musicMuteBtn" title="Mutar Áudio">🔊</span>
+                        <input type="range" id="musicVolumeSlider" min="0" max="1" step="0.05" value="0.8" class="vol-slider">
+                    </div>
+                </div>
+
+                <button id="playlistBtn" class="btn-icon hidden" title="Gerenciar Playlist de Áudio">
                     <span>🎵</span>
                 </button>
-                <input type="file" id="audioInput" accept="audio/*" style="display: none;">
-                <button id="playPauseBtn" class="btn-icon" title="Slideshow">
+                <input type="file" id="audioInput" accept="audio/*" multiple style="display: none;">
+
+                <button id="gridModeBtn" class="btn-icon hidden" title="Modo Grade / Mosaico (G)">
+                    <span>🗂️</span>
+                </button>
+
+                <button id="playPauseBtn" class="btn-icon" title="Iniciar Slideshow (Espaço)">
                     <span>▶</span>
                 </button>
-                <button id="projectBtn" class="btn-icon" title="Projetar (F5)">
+
+                <button id="projectBtn" class="btn-icon" title="Projetar em 2ª Tela (F5)">
                     <span>📺</span>
                 </button>
+
                 <button id="settingsBtn" class="btn-icon" title="Configurações">
                     <span>⚙️</span>
                 </button>
-                <button id="selectBtn" class="btn primary">
-                    <span>✨</span> Importar Imagens
-                </button>
+
+                <!-- Import Button Group -->
+                <div class="import-dropdown">
+                    <button id="selectBtn" class="btn primary" title="Importar fotos e vídeos">
+                        <span>✨</span> Importar Mídias
+                    </button>
+                    <button id="importFolderBtn" class="btn secondary" title="Importar pasta inteira">
+                        <span>📁</span> Abrir Pasta
+                    </button>
+                </div>
             </div>
         </header>
 
+        <!-- Main Workspace -->
         <main>
+            <!-- Welcome Screen -->
             <div id="welcomeScreen" class="welcome">
                 <div class="welcome-content">
-                    <div class="hero-icon">📸</div>
-                    <h2>Lumina Presentation</h2>
-                    <p>A experiência visual mais moderna para suas fotos.</p>
-                    <p class="hint">Aperte <strong>F5</strong> para brilhar em tela cheia.</p>
+                    <div class="hero-icon-container">
+                        <div class="hero-glow"></div>
+                        <div class="hero-icon">📸</div>
+                    </div>
+                    <h2>Lumina Presentation 2.0</h2>
+                    <p class="subtitle">Apresentador cinematográfico de fotos e vídeos com projeção dual-screen, efeito Ambilight e controle de palco pro.</p>
+                    
+                    <div class="welcome-actions">
+                        <button id="welcomeSelectBtn" class="btn primary btn-lg">
+                            <span>✨</span> Selecionar Fotos & Vídeos
+                        </button>
+                        <button id="welcomeFolderBtn" class="btn secondary btn-lg">
+                            <span>📁</span> Carregar Pasta Completa
+                        </button>
+                    </div>
+
+                    <div class="drop-hint-box">
+                        <span class="drop-icon">📥</span>
+                        <p>Ou <strong>arraste e solte</strong> arquivos ou pastas aqui</p>
+                    </div>
+
+                    <div class="feature-pills">
+                        <span class="pill">📺 Dual-Screen F5</span>
+                        <span class="pill">🌈 Efeito Ambilight</span>
+                        <span class="pill">🎬 Ken Burns</span>
+                        <span class="pill">🎥 Vídeos 4K & Áudio</span>
+                        <span class="pill">🗂️ Modo Mosaico (G)</span>
+                    </div>
                 </div>
             </div>
 
+            <!-- Viewer Workspace -->
             <div id="viewerScreen" class="viewer hidden">
+                <!-- Sidebar Thumbnails -->
                 <aside id="thumbSidebar" class="thumb-sidebar">
-                    <button id="toggleSidebar" class="sidebar-toggle-btn" title="Recolher/Expandir">
+                    <button id="toggleSidebar" class="sidebar-toggle-btn" title="Recolher/Expandir Barra Lateral">
                         <span>‹</span>
                     </button>
-                    <div class="sidebar-header">Miniaturas</div>
+                    <div class="sidebar-header">
+                        <div class="sidebar-title">
+                            <span>Mídias</span>
+                            <span id="mediaCountBadge" class="sidebar-count">0</span>
+                        </div>
+                        <div class="sidebar-actions">
+                            <button id="sidebarSortBtn" class="btn-micro" title="Ordenar / Shuffle">🔀</button>
+                            <button id="sidebarAddBtn" class="btn-micro" title="Adicionar Mais Mídias">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Filter Tabs -->
+                    <div class="sidebar-tabs">
+                        <button class="tab-btn active" data-tab="all">Todas</button>
+                        <button class="tab-btn" data-tab="image">Fotos</button>
+                        <button class="tab-btn" data-tab="video">Vídeos</button>
+                    </div>
+
                     <div id="thumbList" class="thumb-list"></div>
                 </aside>
 
+                <!-- Stage / Image & Video Display -->
                 <div id="imageDisplay" class="image-display show-cursor">
+                    <!-- Ambilight Background Glow -->
+                    <div id="ambilightBg" class="ambilight-halo"></div>
+
+                    <!-- Blackout & Whiteout Overlays -->
+                    <div id="stageBlackout" class="stage-overlay blackout"></div>
+                    <div id="stageWhiteout" class="stage-overlay whiteout"></div>
+
+                    <!-- Media Container -->
                     <div class="image-container" id="zoomContainer">
-                        <img id="mainImage" src="" alt="Lumina Image">
+                        <img id="mainImage" src="" alt="Lumina Main Image" class="media-node">
+                        <video id="mainVideo" src="" class="media-node hidden" playsinline></video>
                     </div>
-                    
+
+                    <!-- Custom Video Controls (Active when video is playing) -->
+                    <div id="videoControlsBar" class="video-controls-bar hidden">
+                        <button id="vidPlayPauseBtn" class="vid-btn">⏸</button>
+                        <span id="vidCurrentTime" class="vid-time">0:00</span>
+                        <input type="range" id="vidSeekBar" class="vid-seek" min="0" max="100" value="0">
+                        <span id="vidDuration" class="vid-time">0:00</span>
+                        <button id="vidMuteBtn" class="vid-btn">🔊</button>
+                        <input type="range" id="vidVolumeBar" class="vid-vol" min="0" max="1" step="0.05" value="1">
+                    </div>
+
+                    <!-- Presenter HUD (Top) -->
+                    <div id="presenterHUD" class="presenter-hud">
+                        <div class="hud-left">
+                            <div id="imageCounterOverlay" class="hud-pill">
+                                <span id="counter">0 de 0</span>
+                            </div>
+                            <div class="hud-timer hud-pill" title="Cronômetro do Apresentador">
+                                <span>⏱️</span>
+                                <span id="timerDisplay">00:00</span>
+                                <button id="timerResetBtn" class="btn-micro" title="Zerar Timer">↺</button>
+                            </div>
+                        </div>
+
+                        <!-- Next Slide Preview Card -->
+                        <div id="nextUpCard" class="next-up-card" title="A Seguir (Próximo Slide)">
+                            <div class="next-up-thumb">
+                                <img id="nextUpThumbImg" src="" alt="Next">
+                                <span id="nextUpBadge" class="next-up-type">PROX</span>
+                            </div>
+                            <div class="next-up-info">
+                                <span class="next-up-label">A SEGUIR</span>
+                                <span id="nextUpName" class="next-up-title">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Arrows Overlay -->
                     <div class="nav-overlay">
-                        <button id="prevBtn" class="nav-btn">‹</button>
-                        <button id="nextBtn" class="nav-btn">›</button>
+                        <button id="prevBtn" class="nav-btn" title="Anterior (← / A)">‹</button>
+                        <button id="nextBtn" class="nav-btn" title="Próximo (→ / D)">›</button>
                     </div>
 
-                    <div id="imageCounterOverlay" class="image-counter">
-                        <span id="counter">0 / 0</span>
+                    <!-- Quick Tools & Stage Bar (Bottom) -->
+                    <div class="quick-toolbar">
+                        <div class="tool-group">
+                            <button class="filter-btn active" data-filter="none">Normal</button>
+                            <button class="filter-btn" data-filter="grayscale(1) contrast(1.2)">P&B</button>
+                            <button class="filter-btn" data-filter="sepia(1) brightness(0.9)">Sépia</button>
+                            <button class="filter-btn" data-filter="grayscale(1) contrast(5) brightness(1.1)" title="Efeito Mangá">Mangá</button>
+                        </div>
+                        <div class="tool-divider"></div>
+                        <div class="tool-group">
+                            <button id="rotateBtn" class="tool-btn" title="Girar Imagem 90° (R)">🔄 Girar</button>
+                            <button id="ambilightToggleBtn" class="tool-btn active" title="Alternar Efeito Ambilight">🌈 Ambilight</button>
+                            <button id="blackoutBtn" class="tool-btn" title="Blackout - Tela Preta (B)">⬛ Blackout</button>
+                            <button id="whiteoutBtn" class="tool-btn" title="Whiteout - Tela Branca (W)">⬜ Whiteout</button>
+                            <button id="exifBtn" class="tool-btn" title="Metadados EXIF & Mídia">ℹ️ Info</button>
+                        </div>
                     </div>
 
-                    <div class="quick-filters">
-                        <button class="filter-btn" data-filter="none">Normal</button>
-                        <button class="filter-btn" data-filter="grayscale(1) contrast(1.2)">P&B</button>
-                        <button class="filter-btn" data-filter="sepia(1) brightness(0.9)">Sépia</button>
-                        <button class="filter-btn" data-filter="grayscale(1) contrast(5) brightness(1.1)" title="Efeito Mangá">Mangá</button>
-                        <button id="exifBtn" class="filter-btn">Metadados</button>
-                    </div>
-
+                    <!-- EXIF / Media Info Card -->
                     <div id="exifCard" class="exif-card hidden">
                         <div class="exif-header">
-                            <h4>Metadados da Imagem</h4>
+                            <h4>Metadados da Mídia</h4>
                             <button id="closeExif" class="close-btn-sm">&times;</button>
                         </div>
                         <div id="exifContent" class="exif-content">
@@ -93,9 +229,53 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div id="controlsBar" class="controls-bar hidden">
-                    <!-- Informações movidas para o overlay da imagem -->
+            <!-- Grid Overview Modal (Modo Mosaico / Grade) -->
+            <div id="gridModal" class="grid-modal hidden">
+                <div class="grid-modal-container">
+                    <div class="grid-modal-header">
+                        <div class="grid-title-area">
+                            <h2>🗂️ Visão Geral da Apresentação</h2>
+                            <span id="gridTotalCount" class="grid-counter">0 itens</span>
+                        </div>
+                        <div class="grid-tools">
+                            <input type="text" id="gridSearchInput" placeholder="Buscar por nome..." class="grid-search-input">
+                            <select id="gridSortSelect" class="grid-sort-select">
+                                <option value="original">Ordem Original</option>
+                                <option value="name-asc">Nome (A - Z)</option>
+                                <option value="name-desc">Nome (Z - A)</option>
+                                <option value="type-image">Fotos Primeiro</option>
+                                <option value="type-video">Vídeos Primeiro</option>
+                                <option value="shuffle">Aleatório (Shuffle)</option>
+                            </select>
+                            <button id="closeGridBtn" class="btn-text">
+                                <span>✕ Fechar (G / Esc)</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="gridContent" class="grid-cards-container">
+                        <!-- Gerado dinamicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Playlist Drawer / Modal -->
+            <div id="playlistModal" class="playlist-modal hidden">
+                <div class="playlist-container">
+                    <div class="playlist-header">
+                        <h3>🎵 Playlist de Músicas de Fundo</h3>
+                        <button id="closePlaylistBtn" class="close-btn-sm">&times;</button>
+                    </div>
+                    <div class="playlist-actions">
+                        <button id="addMusicBtn" class="btn secondary btn-sm">
+                            <span>+</span> Adicionar Músicas
+                        </button>
+                        <button id="clearPlaylistBtn" class="btn-text btn-sm">Limpar</button>
+                    </div>
+                    <div id="playlistTracks" class="playlist-tracks">
+                        <!-- Lista de faixas -->
+                    </div>
                 </div>
             </div>
 
@@ -106,53 +286,75 @@
                         <button id="backBtn" class="btn-text">
                             <span>←</span> Voltar
                         </button>
-                        <h2>Configurações do Lumina</h2>
+                        <h2>Configurações do Lumina 2.0</h2>
                     </header>
 
                     <div class="settings-grid">
                         <div class="settings-section">
                             <h3>🎞️ Slideshow & Exibição</h3>
                             <div class="setting-item">
-                                <label for="slideshowSpeed">Velocidade (segundos)</label>
+                                <label for="slideshowSpeed">Tempo por Slide / Foto (segundos)</label>
                                 <input type="number" id="slideshowSpeed" min="1" max="60" value="4">
                             </div>
                             <div class="setting-item">
-                                <label for="borderSize">Tamanho da Borda (px)</label>
-                                <input type="range" id="borderSize" min="0" max="100" value="40">
+                                <label for="borderSize">Margem Safe Area (px)</label>
+                                <input type="range" id="borderSize" min="0" max="100" value="30">
                             </div>
                             <div class="setting-item">
-                                <label for="imageFit">Ajuste da Imagem</label>
+                                <label for="imageFit">Ajuste da Mídia</label>
                                 <select id="imageFit">
-                                    <option value="contain">Caber na Tela (Fit)</option>
-                                    <option value="cover">Preencher Tela (Cover)</option>
+                                    <option value="contain">Caber na Tela (Contain / Fit)</option>
+                                    <option value="cover">Preencher Toda a Tela (Cover)</option>
                                 </select>
                             </div>
                             <div class="setting-item">
                                 <label for="transitionType">Efeito de Transição</label>
                                 <select id="transitionType">
-                                    <option value="fade">Esmaecer (Fade)</option>
-                                    <option value="slide">Deslizar (Slide)</option>
-                                    <option value="none">Instantâneo</option>
+                                    <option value="fade">Esmaecer (Crossfade Suave)</option>
+                                    <option value="ken-burns">Ken Burns (Cinematográfico Pan & Zoom)</option>
+                                    <option value="zoom-fade">Zoom & Fade</option>
+                                    <option value="slide">Deslizar Lateral (Slide)</option>
+                                    <option value="none">Instantâneo (Sem transição)</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="settings-section">
-                            <h3>⚙️ Preferências</h3>
+                            <h3>🎬 Vídeos & Efeitos</h3>
                             <label class="checkbox-item">
-                                <input type="checkbox" id="autoHideOption" checked> Auto-ocultar controles
+                                <input type="checkbox" id="videoAutoAdvanceOption" checked> Avançar slide quando vídeo terminar
                             </label>
                             <label class="checkbox-item">
-                                <input type="checkbox" id="loopOption" checked> Loop infinito
+                                <input type="checkbox" id="ambilightOption" checked> Efeito Ambilight Glow reativo
                             </label>
                             <label class="checkbox-item">
-                                <input type="checkbox" id="showInfoOption" checked> Mostrar info da imagem
+                                <input type="checkbox" id="presenterHUDOption" checked> Exibir HUD do Apresentador (Timer & Next Up)
                             </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="autoHideOption" checked> Auto-ocultar controles ao inativar mouse
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="loopOption" checked> Loop infinito da apresentação
+                            </label>
+
+                            <!-- Keyboard Cheat Sheet Box -->
+                            <div class="keyboard-box">
+                                <h4>⌨️ Principais Atalhos</h4>
+                                <div class="shortcut-list">
+                                    <span><kbd>F5</kbd> Projeção</span>
+                                    <span><kbd>Espaço</kbd> Slideshow</span>
+                                    <span><kbd>G</kbd> Modo Grade</span>
+                                    <span><kbd>B</kbd> Blackout</span>
+                                    <span><kbd>W</kbd> Whiteout</span>
+                                    <span><kbd>R</kbd> Girar 90°</span>
+                                    <span><kbd>M</kbd> Mudo</span>
+                                </div>
+                            </div>
                             
                             <div class="support-box">
-                                <h3>💖 Apoie o Projeto</h3>
-                                <p>Gostou do Lumina? Considere apoiar o desenvolvimento.</p>
-                                <button id="supportBtn" class="btn-support">☕ Apoie-me</button>
+                                <h3>💖 Lumina Presentation</h3>
+                                <p>Desenvolvido com carinho. Apoie novas atualizações!</p>
+                                <button id="supportBtn" class="btn-support">☕ Apoie o Projeto</button>
                             </div>
                         </div>
                     </div>
