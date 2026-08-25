@@ -392,3 +392,110 @@ autoUpdater.on('error', (err) => {
         });
     }
 });
+
+// IPC: Export Reordered Folder
+ipcMain.handle('export-reordered-folder', async (event, items) => {
+    if (!items || items.length === 0) return { success: false, message: 'Nenhuma mídia para exportar' };
+    
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Selecionar pasta de destino para exportação',
+        properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (canceled || filePaths.length === 0) return { success: false, message: 'Exportação cancelada' };
+
+    const destDir = filePaths[0];
+    const padLength = String(items.length).length < 2 ? 2 : String(items.length).length;
+    let copiedCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item.path || !fs.existsSync(item.path)) continue;
+
+        const numPrefix = String(i + 1).padStart(padLength, '0');
+        const ext = path.extname(item.path);
+        const baseNameWithoutExt = path.basename(item.path, ext);
+        const newFileName = `${numPrefix}_${baseNameWithoutExt}${ext}`;
+        const destPath = path.join(destDir, newFileName);
+
+        try {
+            await fs.promises.copyFile(item.path, destPath);
+            copiedCount++;
+        } catch (err) {
+            console.error(`Erro ao copiar ${item.path} para ${destPath}:`, err);
+        }
+    }
+
+    return {
+        success: true,
+        count: copiedCount,
+        destDir: destDir,
+        message: `${copiedCount} arquivos exportados com sucesso para ${destDir}`
+    };
+});
+
+// IPC: Save Lumina Project File (.lumina / JSON)
+ipcMain.handle('save-project-file', async (event, projectData) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Salvar Projeto de Apresentação',
+        defaultPath: 'minha_apresentacao.lumina',
+        filters: [
+            { name: 'Projeto Lumina (*.lumina)', extensions: ['lumina'] },
+            { name: 'Arquivo JSON (*.json)', extensions: ['json'] }
+        ]
+    });
+
+    if (canceled || !filePath) return { success: false, message: 'Salvamento cancelado' };
+
+    try {
+        await fs.promises.writeFile(filePath, JSON.stringify(projectData, null, 2), 'utf-8');
+        return { success: true, filePath, message: 'Projeto salvo com sucesso' };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
+
+// IPC: Load Lumina Project File (.lumina / JSON)
+ipcMain.handle('load-project-file', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Abrir Projeto Lumina',
+        filters: [
+            { name: 'Projeto Lumina (*.lumina)', extensions: ['lumina'] },
+            { name: 'Arquivo JSON (*.json)', extensions: ['json'] }
+        ],
+        properties: ['openFile']
+    });
+
+    if (canceled || filePaths.length === 0) return { success: false };
+
+    try {
+        const content = await fs.promises.readFile(filePaths[0], 'utf-8');
+        const projectData = JSON.parse(content);
+        return { success: true, projectData, filePath: filePaths[0] };
+    } catch (err) {
+        return { success: false, message: 'Arquivo de projeto inválido: ' + err.message };
+    }
+});
+
+// IPC: Save Image Snapshot File
+ipcMain.handle('save-image-file', async (event, { dataUrl, defaultName }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Salvar Imagem',
+        defaultPath: defaultName || 'slide_lumina.png',
+        filters: [
+            { name: 'Imagem PNG (*.png)', extensions: ['png'] },
+            { name: 'Imagem JPEG (*.jpg)', extensions: ['jpg', 'jpeg'] }
+        ]
+    });
+
+    if (canceled || !filePath) return { success: false };
+
+    try {
+        const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        await fs.promises.writeFile(filePath, buffer);
+        return { success: true, filePath, message: 'Imagem salva com sucesso' };
+    } catch (err) {
+        return { success: false, message: err.message };
+    }
+});
