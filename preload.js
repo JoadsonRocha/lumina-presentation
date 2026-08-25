@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    // Media selection
+    // Media selection & parsing
     selectMedia: () => ipcRenderer.invoke('select-media'),
     selectFolder: () => ipcRenderer.invoke('select-folder'),
     selectAudio: () => ipcRenderer.invoke('select-audio'),
@@ -28,6 +28,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleFullscreenMain: () => ipcRenderer.send('toggle-fullscreen-main'),
     isFullscreenMain: () => ipcRenderer.invoke('is-fullscreen-main'),
     onMainFullscreenChanged: (callback) => ipcRenderer.on('main-fullscreen-changed', (event, isFull) => callback(isFull)),
+
+    // Export & Projects
+    exportReorderedFolder: (items) => ipcRenderer.invoke('export-reordered-folder', items),
+    saveProjectFile: (projectData) => ipcRenderer.invoke('save-project-file', projectData),
+    loadProjectFile: () => ipcRenderer.invoke('load-project-file'),
+    saveImageFile: (dataUrl, defaultName) => ipcRenderer.invoke('save-image-file', { dataUrl, defaultName }),
 
     // Updates & Shell
     checkForUpdates: () => ipcRenderer.send('check-for-updates'),
