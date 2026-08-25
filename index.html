@@ -67,6 +67,10 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                 </button>
 
+                <button id="exportModalBtn" class="btn-icon" title="Exportar / Salvar Projeto">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+
                 <button id="settingsBtn" class="btn-icon" title="Configurações">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 </button>
@@ -99,6 +103,9 @@
                         <button id="welcomeFolderBtn" class="btn secondary btn-lg">
                             Carregar Pasta
                         </button>
+                        <button id="welcomeLoadProjectBtn" class="btn text btn-lg">
+                            Abrir Projeto (.lumina)
+                        </button>
                     </div>
 
                     <div class="drop-hint-box">
@@ -109,6 +116,7 @@
                         <span class="pill">Projeção Dual-Screen (F5)</span>
                         <span class="pill">Vídeos & Fotos</span>
                         <span class="pill">Visão em Grade (G)</span>
+                        <span class="pill">Exportação & Projetos</span>
                         <span class="pill">Tela Cheia (F11)</span>
                     </div>
                 </div>
@@ -254,6 +262,54 @@
                     </div>
                     <div id="gridContent" class="grid-cards-container">
                         <!-- Gerado dinamicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Modal -->
+            <div id="exportModal" class="export-modal hidden">
+                <div class="export-container">
+                    <div class="export-header">
+                        <h3>Exportar & Projetos</h3>
+                        <button id="closeExportBtn" class="close-btn-sm">&times;</button>
+                    </div>
+
+                    <div class="export-options">
+                        <div class="export-card" id="exportFolderCard">
+                            <div class="export-card-icon">📁</div>
+                            <div class="export-card-content">
+                                <h4>Exportar Pasta Ordenada</h4>
+                                <p>Copia todas as mídias renomeadas em ordem numérica (ex: 01_foto.jpg, 02_video.mp4) para uma nova pasta.</p>
+                            </div>
+                            <button id="exportFolderActionBtn" class="btn primary btn-sm">Exportar</button>
+                        </div>
+
+                        <div class="export-card" id="saveProjectCard">
+                            <div class="export-card-icon">💾</div>
+                            <div class="export-card-content">
+                                <h4>Salvar Projeto (.lumina)</h4>
+                                <p>Salva o projeto com a ordem das mídias, playlist de áudio e configurações para reabrir no futuro.</p>
+                            </div>
+                            <button id="saveProjectActionBtn" class="btn secondary btn-sm">Salvar</button>
+                        </div>
+
+                        <div class="export-card" id="loadProjectCard">
+                            <div class="export-card-icon">📂</div>
+                            <div class="export-card-content">
+                                <h4>Carregar Projeto (.lumina)</h4>
+                                <p>Abre uma apresentação salva anteriormente.</p>
+                            </div>
+                            <button id="loadProjectActionBtn" class="btn secondary btn-sm">Abrir</button>
+                        </div>
+
+                        <div class="export-card" id="saveCurrentCard">
+                            <div class="export-card-icon">🖼️</div>
+                            <div class="export-card-content">
+                                <h4>Salvar Slide Atual</h4>
+                                <p>Exporta a foto atual com os filtros (P&B, sépia, contraste) e rotação aplicados.</p>
+                            </div>
+                            <button id="saveCurrentActionBtn" class="btn secondary btn-sm">Salvar Imagem</button>
+                        </div>
                     </div>
                 </div>
             </div>
