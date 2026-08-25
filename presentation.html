@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Projeção Lumina</title>
+    <title>Lumina - Projeção Fullscreen</title>
     <style>
         :root {
             --brand-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --safe-padding: 0px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         body {
-            margin: 0;
-            padding: 20px; /* Margem de segurança na projeção */
             background-color: #000;
             height: 100vh;
             width: 100vw;
@@ -18,23 +22,111 @@
             justify-content: center;
             align-items: center;
             overflow: hidden;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             cursor: none;
-            box-sizing: border-box;
+            position: relative;
         }
         body.show-cursor {
             cursor: default;
         }
-        img {
+
+        /* Ambilight Background Glow */
+        .ambilight-bg {
+            position: absolute;
+            inset: -40px;
+            z-index: 1;
+            filter: blur(60px) brightness(0.65) saturate(1.4);
+            opacity: 0;
+            transition: opacity 0.8s ease, transform 1s ease;
+            transform: scale(1.15);
+            pointer-events: none;
+            background-size: cover;
+            background-position: center;
+        }
+        .ambilight-bg.active {
+            opacity: 0.75;
+        }
+
+        /* Projection Stage Container */
+        .stage-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: var(--safe-padding);
+            transition: padding 0.3s ease;
+        }
+
+        .media-element {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            transition: opacity 0.4s ease-in-out;
-            border-radius: 8px; /* Cantos arredondados sutis na projeção */
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s ease;
+            opacity: 0;
         }
+        .media-element.visible {
+            opacity: 1;
+        }
+        .media-element.fit-cover {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Ken Burns Animation for Projector */
+        @keyframes kenBurnsEffect {
+            0% { transform: scale(1) translate(0, 0); }
+            50% { transform: scale(1.08) translate(-1.5%, 1%); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+        .ken-burns {
+            animation: kenBurnsEffect 16s ease-in-out infinite alternate !important;
+        }
+
+        /* Slide Transition classes */
+        .slide-out {
+            transform: translateX(-40px) scale(0.98);
+            opacity: 0 !important;
+        }
+        .slide-in {
+            transform: translateX(40px) scale(0.98);
+            opacity: 0 !important;
+        }
+        .zoom-fade-out {
+            transform: scale(1.06);
+            opacity: 0 !important;
+        }
+
+        /* Stage Overlays (Blackout & Whiteout) */
+        .stage-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 900;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        .stage-overlay.blackout {
+            background-color: #000000;
+        }
+        .stage-overlay.whiteout {
+            background-color: #ffffff;
+        }
+        .stage-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Navigation & Hints */
         .nav-overlay {
             position: absolute;
             inset: 0;
+            z-index: 100;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -47,33 +139,38 @@
             opacity: 1;
         }
         .nav-btn {
-            width: 80px;
-            height: 80px;
-            border-radius: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(15px);
+            width: 72px;
+            height: 72px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(10, 10, 15, 0.6);
+            backdrop-filter: blur(20px);
             color: white;
-            font-size: 3rem;
+            font-size: 2.8rem;
+            line-height: 1;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
         .nav-btn:hover {
             background: var(--brand-gradient);
             border-color: transparent;
-            transform: scale(1.1);
+            transform: scale(1.08);
         }
         .close-hint {
             position: absolute;
-            top: 30px;
-            right: 30px;
-            color: white;
-            font-size: 0.9rem;
-            background: rgba(0, 0, 0, 0.6);
+            top: 24px;
+            right: 28px;
+            z-index: 100;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: rgba(10, 10, 15, 0.7);
+            backdrop-filter: blur(15px);
             padding: 8px 16px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -84,22 +181,68 @@
         body.show-cursor .close-hint {
             opacity: 1;
         }
+
+        .media-badge {
+            position: absolute;
+            bottom: 24px;
+            left: 28px;
+            z-index: 100;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(10, 10, 15, 0.75);
+            backdrop-filter: blur(15px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        body.show-cursor .media-badge {
+            opacity: 1;
+        }
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="show-cursor">
-    <div class="close-hint">ESC para sair</div>
-    <img id="projectorImage" src="" alt="">
+    <!-- Ambilight Background Glow -->
+    <div id="ambilightBg" class="ambilight-bg"></div>
+
+    <!-- Blackout / Whiteout Overlays -->
+    <div id="blackoutOverlay" class="stage-overlay blackout"></div>
+    <div id="whiteoutOverlay" class="stage-overlay whiteout"></div>
+
+    <!-- Header info & Close hint -->
+    <div class="close-hint">ESC ou F5 para sair da Projeção</div>
+    <div id="mediaBadge" class="media-badge">Lumina Projeção</div>
+
+    <!-- Stage Container -->
+    <div id="stageContainer" class="stage-container">
+        <img id="projectorImage" class="media-element" src="" alt="Lumina Image">
+        <video id="projectorVideo" class="media-element hidden" src="" autoplay loop playsinline></video>
+    </div>
     
     <div class="nav-overlay">
-        <button id="prevBtn" class="nav-btn">‹</button>
-        <button id="nextBtn" class="nav-btn">›</button>
+        <button id="prevBtn" class="nav-btn" title="Anterior">‹</button>
+        <button id="nextBtn" class="nav-btn" title="Próximo">›</button>
     </div>
 
     <script>
-        const img = document.getElementById('projectorImage');
+        const ambilightBg = document.getElementById('ambilightBg');
+        const stageContainer = document.getElementById('stageContainer');
+        const projectorImage = document.getElementById('projectorImage');
+        const projectorVideo = document.getElementById('projectorVideo');
+        const blackoutOverlay = document.getElementById('blackoutOverlay');
+        const whiteoutOverlay = document.getElementById('whiteoutOverlay');
+        const mediaBadge = document.getElementById('mediaBadge');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
+        
         let idleTimer = null;
+        let currentState = null;
 
         function resetIdleTimer() {
             document.body.classList.add('show-cursor');
@@ -111,14 +254,117 @@
 
         document.addEventListener('mousemove', resetIdleTimer);
 
-        window.electronAPI.onUpdateImage((path) => {
-            img.style.opacity = 0;
-            setTimeout(() => {
-                img.src = `file://${path}`;
-                img.style.opacity = 1;
-            }, 150);
+        function applyMedia(state) {
+            if (!state || !state.media) return;
+            currentState = state;
+            
+            const media = state.media;
+            const fit = state.fit || 'contain';
+            const filter = state.filter || 'none';
+            const rotation = state.rotation || 0;
+            const borderSize = state.borderSize !== undefined ? state.borderSize : 0;
+            const transitionType = state.transitionType || 'fade';
+            const enableAmbilight = state.ambilightEnabled !== false;
+
+            // Safe padding
+            stageContainer.style.setProperty('--safe-padding', `${borderSize}px`);
+
+            // Apply Blackout & Whiteout state
+            blackoutOverlay.classList.toggle('active', !!state.blackout);
+            whiteoutOverlay.classList.toggle('active', !!state.whiteout);
+
+            // Badge text
+            mediaBadge.textContent = media.name || (media.type === 'video' ? 'Vídeo' : 'Imagem');
+
+            if (media.type === 'video') {
+                // Video Mode
+                projectorImage.classList.add('hidden');
+                projectorImage.classList.remove('visible');
+                
+                projectorVideo.classList.remove('hidden');
+                projectorVideo.style.filter = filter;
+                projectorVideo.className = `media-element ${fit === 'cover' ? 'fit-cover' : ''}`;
+                projectorVideo.style.transform = `rotate(${rotation}deg)`;
+
+                const videoSrc = `file://${media.path}`;
+                if (projectorVideo.src !== videoSrc && !projectorVideo.src.endsWith(encodeURI(media.path))) {
+                    projectorVideo.src = videoSrc;
+                }
+                projectorVideo.muted = !!state.videoMuted;
+                if (state.videoVolume !== undefined) projectorVideo.volume = state.videoVolume;
+                projectorVideo.play().catch(() => {});
+
+                // Transition
+                setTimeout(() => {
+                    projectorVideo.classList.add('visible');
+                }, 50);
+
+                // Ambilight
+                if (enableAmbilight) {
+                    ambilightBg.style.backgroundImage = 'none';
+                    ambilightBg.classList.remove('active');
+                } else {
+                    ambilightBg.classList.remove('active');
+                }
+            } else {
+                // Image Mode
+                if (!projectorVideo.paused) projectorVideo.pause();
+                projectorVideo.classList.add('hidden');
+                projectorVideo.classList.remove('visible');
+                
+                projectorImage.classList.remove('hidden');
+                projectorImage.style.filter = filter;
+                projectorImage.className = `media-element ${fit === 'cover' ? 'fit-cover' : ''} ${transitionType === 'ken-burns' ? 'ken-burns' : ''}`;
+                projectorImage.style.transform = `rotate(${rotation}deg)`;
+
+                const imgSrc = `file://${media.path}`;
+
+                // Smooth Transition Out
+                if (transitionType === 'slide') {
+                    projectorImage.classList.add('slide-out');
+                } else if (transitionType === 'zoom-fade') {
+                    projectorImage.classList.add('zoom-fade-out');
+                } else if (transitionType === 'none') {
+                    projectorImage.style.opacity = 1;
+                } else {
+                    projectorImage.classList.remove('visible');
+                }
+
+                setTimeout(() => {
+                    projectorImage.src = imgSrc;
+                    projectorImage.classList.remove('slide-out', 'zoom-fade-out');
+                    projectorImage.classList.add('visible');
+
+                    // Ambilight
+                    if (enableAmbilight) {
+                        ambilightBg.style.backgroundImage = `url("${imgSrc.replace(/"/g, '\\"')}")`;
+                        ambilightBg.classList.add('active');
+                    } else {
+                        ambilightBg.classList.remove('active');
+                    }
+                }, transitionType === 'none' ? 0 : 120);
+            }
+        }
+
+        // IPC Listeners
+        window.electronAPI.onSyncProjection((state) => {
+            applyMedia(state);
         });
 
+        window.electronAPI.onStageCommand((cmd) => {
+            if (cmd === 'toggle-blackout') {
+                blackoutOverlay.classList.toggle('active');
+                whiteoutOverlay.classList.remove('active');
+            } else if (cmd === 'toggle-whiteout') {
+                whiteoutOverlay.classList.toggle('active');
+                blackoutOverlay.classList.remove('active');
+            } else if (cmd === 'clear-stage') {
+                blackoutOverlay.classList.remove('active');
+                whiteoutOverlay.classList.remove('active');
+            }
+        });
+
+        // Navigation
         prevBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             window.electronAPI.navigatePrev();
@@ -133,12 +379,18 @@
 
         document.addEventListener('keydown', (e) => {
             resetIdleTimer();
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' || e.key === 'F5') {
                 window.electronAPI.closePresentation();
-            } else if (e.key === 'ArrowRight') {
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
                 window.electronAPI.navigateNext();
-            } else if (e.key === 'ArrowLeft') {
+            } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
                 window.electronAPI.navigatePrev();
+            } else if (e.key === 'b' || e.key === 'B') {
+                blackoutOverlay.classList.toggle('active');
+                whiteoutOverlay.classList.remove('active');
+            } else if (e.key === 'w' || e.key === 'W') {
+                whiteoutOverlay.classList.toggle('active');
+                blackoutOverlay.classList.remove('active');
             }
         });
 

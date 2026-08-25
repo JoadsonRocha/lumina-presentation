@@ -1,28 +1,71 @@
 const { app, BrowserWindow, ipcMain, dialog, screen, globalShortcut, Menu, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const fs = require('fs');
 
 // Disable default menu
 Menu.setApplicationMenu(null);
 
-let mainWindow;
+let mainWindow = null;
 let presentationWindow = null;
-let currentImagePath = null;
+let currentProjectionState = null;
+
+const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif']);
+const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv', 'avi', 'ogg']);
+const SUPPORTED_AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac']);
+
+function getMediaType(filePath) {
+    const ext = path.extname(filePath).toLowerCase().replace('.', '');
+    if (SUPPORTED_IMAGE_EXTENSIONS.has(ext)) return 'image';
+    if (SUPPORTED_VIDEO_EXTENSIONS.has(ext)) return 'video';
+    return null;
+}
+
+async function scanDirectoryForMedia(dirPath) {
+    const mediaFiles = [];
+    
+    async function scan(currentDir, depth = 0) {
+        if (depth > 3) return; // Prevent excessive recursion
+        try {
+            const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(currentDir, entry.name);
+                if (entry.isDirectory()) {
+                    await scan(fullPath, depth + 1);
+                } else if (entry.isFile()) {
+                    const type = getMediaType(entry.name);
+                    if (type) {
+                        mediaFiles.push({
+                            path: fullPath,
+                            name: entry.name,
+                            type: type
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error scanning folder:', currentDir, err);
+        }
+    }
+
+    await scan(dirPath);
+    return mediaFiles;
+}
 
 function createMainWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        minWidth: 900,
-        minHeight: 700,
+        width: 1280,
+        height: 850,
+        minWidth: 960,
+        minHeight: 680,
         title: 'Lumina Presentation',
-        backgroundColor: '#0a0a0c',
+        backgroundColor: '#070709',
         icon: path.join(__dirname, 'logo.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: true
+            sandbox: false // Sandbox false allows preload full IPC capabilities
         },
         show: false
     });
@@ -48,6 +91,9 @@ function togglePresentation() {
     if (presentationWindow) {
         presentationWindow.close();
         presentationWindow = null;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('projection-status-changed', false);
+        }
         return;
     }
 
@@ -66,7 +112,7 @@ function togglePresentation() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: true
+            sandbox: false
         }
     });
 
@@ -74,20 +120,25 @@ function togglePresentation() {
 
     presentationWindow.on('closed', () => {
         presentationWindow = null;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('projection-status-changed', false);
+        }
     });
 
-    // Send the current image if available
-    if (currentImagePath) {
-        presentationWindow.webContents.once('did-finish-load', () => {
-            presentationWindow.webContents.send('update-image', currentImagePath);
-        });
-    }
+    presentationWindow.webContents.once('did-finish-load', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('projection-status-changed', true);
+        }
+        if (currentProjectionState) {
+            presentationWindow.webContents.send('sync-projection', currentProjectionState);
+        }
+    });
 }
 
 app.whenReady().then(() => {
     createMainWindow();
 
-    // Register F5 shortcut
+    // Register F5 shortcut for projection
     globalShortcut.register('F5', () => {
         togglePresentation();
     });
@@ -105,21 +156,108 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC Handlers
-ipcMain.handle('select-images', async () => {
+// IPC Handlers: Media Selection
+ipcMain.handle('select-media', async () => {
+    if (!mainWindow) return [];
     const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Selecionar Fotos e Vídeos',
         properties: ['openFile', 'multiSelections'],
         filters: [
-            { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'] }
+            { 
+                name: 'Mídias (Fotos e Vídeos)', 
+                extensions: [
+                    'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif',
+                    'mp4', 'webm', 'mov', 'mkv', 'avi'
+                ] 
+            },
+            { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif'] },
+            { name: 'Vídeos', extensions: ['mp4', 'webm', 'mov', 'mkv', 'avi'] },
+            { name: 'Todos os Arquivos', extensions: ['*'] }
         ]
     });
-    return result.filePaths;
+
+    if (result.canceled || !result.filePaths) return [];
+
+    return result.filePaths.map(filePath => ({
+        path: filePath,
+        name: path.basename(filePath),
+        type: getMediaType(filePath) || 'image'
+    }));
 });
 
-ipcMain.on('image-changed', (event, imagePath) => {
-    currentImagePath = imagePath;
-    if (presentationWindow) {
-        presentationWindow.webContents.send('update-image', imagePath);
+// IPC Handlers: Folder Selection
+ipcMain.handle('select-folder', async () => {
+    if (!mainWindow) return [];
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Selecionar Pasta com Fotos e Vídeos',
+        properties: ['openDirectory']
+    });
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return [];
+    }
+
+    const folderPath = result.filePaths[0];
+    return await scanDirectoryForMedia(folderPath);
+});
+
+// IPC Handlers: Audio Selection
+ipcMain.handle('select-audio', async () => {
+    if (!mainWindow) return [];
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Selecionar Músicas de Fundo',
+        properties: ['openFile', 'multiSelections'],
+        filters: [
+            { name: 'Arquivos de Áudio', extensions: ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'] }
+        ]
+    });
+
+    if (result.canceled || !result.filePaths) return [];
+
+    return result.filePaths.map(filePath => ({
+        path: filePath,
+        name: path.basename(filePath)
+    }));
+});
+
+// IPC Handlers: Parse Dropped Files
+ipcMain.handle('parse-dropped-paths', async (event, paths) => {
+    const mediaList = [];
+    for (const itemPath of paths) {
+        try {
+            const stats = await fs.promises.stat(itemPath);
+            if (stats.isDirectory()) {
+                const subMedia = await scanDirectoryForMedia(itemPath);
+                mediaList.push(...subMedia);
+            } else if (stats.isFile()) {
+                const type = getMediaType(itemPath);
+                if (type) {
+                    mediaList.push({
+                        path: itemPath,
+                        name: path.basename(itemPath),
+                        type: type
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Error handling dropped path:', itemPath, err);
+        }
+    }
+    return mediaList;
+});
+
+// State Syncing with Projection
+ipcMain.on('sync-projection', (event, state) => {
+    currentProjectionState = state;
+    if (presentationWindow && !presentationWindow.isDestroyed()) {
+        presentationWindow.webContents.send('sync-projection', state);
+    }
+});
+
+// Stage Commands (Blackout, Whiteout, etc.)
+ipcMain.on('stage-command', (event, command) => {
+    if (presentationWindow && !presentationWindow.isDestroyed()) {
+        presentationWindow.webContents.send('stage-command', command);
     }
 });
 
@@ -133,40 +271,66 @@ ipcMain.on('toggle-presentation', () => {
     togglePresentation();
 });
 
-// Auto-Updater Logic
-ipcMain.on('check-for-updates', () => {
-    if (app.isPackaged) {
-        autoUpdater.checkForUpdatesAndNotify();
-    } else {
-        // Mock feedback for development
-        mainWindow.webContents.send('update-message', 'O auto-updater só funciona em apps compilados.');
+ipcMain.handle('get-projection-status', () => {
+    return presentationWindow !== null && !presentationWindow.isDestroyed();
+});
+
+ipcMain.on('toggle-fullscreen-main', () => {
+    if (mainWindow) {
+        mainWindow.setFullScreen(!mainWindow.isFullScreen());
     }
 });
 
-autoUpdater.on('update-available', () => {
-    mainWindow.webContents.send('update-message', 'Uma nova atualização está disponível!');
-});
-
-autoUpdater.on('update-not-available', () => {
-    mainWindow.webContents.send('update-message', 'Você já está usando a versão mais recente.');
-});
-
-autoUpdater.on('error', (err) => {
-    mainWindow.webContents.send('update-message', 'Erro ao verificar atualizações: ' + err.message);
-});
-
-
-
+// Navigation from Projector to Main
 ipcMain.on('navigate-next', () => {
-    if (mainWindow) mainWindow.webContents.send('navigate', 'next');
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('navigate', 'next');
 });
 
 ipcMain.on('navigate-prev', () => {
-    if (mainWindow) mainWindow.webContents.send('navigate', 'prev');
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('navigate', 'prev');
 });
 
 ipcMain.on('open-url', (event, url) => {
     shell.openExternal(url);
 });
 
+// Auto-Updater Logic
+ipcMain.on('check-for-updates', () => {
+    if (app.isPackaged) {
+        autoUpdater.checkForUpdatesAndNotify();
+    } else {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('update-message', {
+                status: 'info',
+                message: 'O auto-updater está em modo de desenvolvimento (versão 2.0.0).'
+            });
+        }
+    }
+});
 
+autoUpdater.on('update-available', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-message', {
+            status: 'available',
+            message: 'Uma nova versão do Lumina está disponível para download!'
+        });
+    }
+});
+
+autoUpdater.on('update-not-available', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-message', {
+            status: 'not-available',
+            message: 'Você já está usando a versão mais recente do Lumina.'
+        });
+    }
+});
+
+autoUpdater.on('error', (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-message', {
+            status: 'error',
+            message: 'Erro ao verificar atualizações: ' + err.message
+        });
+    }
+});

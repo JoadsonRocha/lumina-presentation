@@ -1,14 +1,14 @@
 {
-  "name": "image_ful",
-  "version": "1.0.0",
-  "description": "",
+  "name": "lumina-presentation",
+  "version": "2.0.0",
+  "description": "Apresentador e visualizador moderno de imagens e vídeos de alta performance",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["presentation", "slideshow", "image-viewer", "video-player", "electron", "dual-screen", "glassmorphism"],
+  "author": "Joadson Rocha",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/joadsonrocha/lumina-presentation.git"
