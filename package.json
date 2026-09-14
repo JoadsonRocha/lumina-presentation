@@ -46,7 +46,6 @@
         "nsis"
       ],
       "icon": "icon.ico",
-      "publisherName": "Joadson Rocha",
       "legalTrademarks": "Lumina Presentation™ por Joadson Rocha",
       "requestedExecutionLevel": "asInvoker"
     },
@@ -57,8 +56,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Lumina Presentation",
-      "upgradeCode": "E5D3B892-4C1F-48A2-9F83-615DF91A2E3B",
-      "warningsAsErrors": false
+      "upgradeCode": "E5D3B892-4C1F-48A2-9F83-615DF91A2E3B"
     },
     "nsis": {
       "oneClick": false,
