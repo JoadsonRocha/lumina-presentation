@@ -219,7 +219,7 @@
     <!-- Stage Container -->
     <div id="stageContainer" class="stage-container">
         <img id="projectorImage" class="media-element" src="" alt="Lumina Image">
-        <video id="projectorVideo" class="media-element hidden" src="" autoplay loop playsinline></video>
+        <video id="projectorVideo" class="media-element hidden" src="" autoplay playsinline></video>
     </div>
     
     <div class="nav-overlay">
@@ -301,6 +301,7 @@
                 }
                 projectorVideo.muted = !!state.videoMuted;
                 if (state.videoVolume !== undefined) projectorVideo.volume = state.videoVolume;
+                projectorVideo.loop = (state.videoAutoAdvance === false && !!state.loopEnabled) || !!state.loopVideo;
                 projectorVideo.play().catch(() => {});
 
                 // Reveal

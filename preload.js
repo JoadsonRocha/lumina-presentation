@@ -9,25 +9,49 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Projection sync & controls
     syncProjection: (state) => ipcRenderer.send('sync-projection', state),
-    onSyncProjection: (callback) => ipcRenderer.on('sync-projection', (event, state) => callback(state)),
-    onRequestSyncState: (callback) => ipcRenderer.on('request-sync-state', () => callback()),
+    onSyncProjection: (callback) => {
+        const handler = (event, state) => callback(state);
+        ipcRenderer.on('sync-projection', handler);
+        return () => ipcRenderer.removeListener('sync-projection', handler);
+    },
+    onRequestSyncState: (callback) => {
+        const handler = () => callback();
+        ipcRenderer.on('request-sync-state', handler);
+        return () => ipcRenderer.removeListener('request-sync-state', handler);
+    },
     sendStageCommand: (command) => ipcRenderer.send('stage-command', command),
-    onStageCommand: (callback) => ipcRenderer.on('stage-command', (event, cmd) => callback(cmd)),
+    onStageCommand: (callback) => {
+        const handler = (event, cmd) => callback(cmd);
+        ipcRenderer.on('stage-command', handler);
+        return () => ipcRenderer.removeListener('stage-command', handler);
+    },
     
     togglePresentation: () => ipcRenderer.send('toggle-presentation'),
     closePresentation: () => ipcRenderer.send('close-presentation'),
     getProjectionStatus: () => ipcRenderer.invoke('get-projection-status'),
-    onProjectionStatusChanged: (callback) => ipcRenderer.on('projection-status-changed', (event, isLive) => callback(isLive)),
+    onProjectionStatusChanged: (callback) => {
+        const handler = (event, isLive) => callback(isLive);
+        ipcRenderer.on('projection-status-changed', handler);
+        return () => ipcRenderer.removeListener('projection-status-changed', handler);
+    },
 
     // Navigation
     navigateNext: () => ipcRenderer.send('navigate-next'),
     navigatePrev: () => ipcRenderer.send('navigate-prev'),
-    onNavigate: (callback) => ipcRenderer.on('navigate', (event, direction) => callback(direction)),
+    onNavigate: (callback) => {
+        const handler = (event, direction) => callback(direction);
+        ipcRenderer.on('navigate', handler);
+        return () => ipcRenderer.removeListener('navigate', handler);
+    },
 
     // Window controls
     toggleFullscreenMain: () => ipcRenderer.send('toggle-fullscreen-main'),
     isFullscreenMain: () => ipcRenderer.invoke('is-fullscreen-main'),
-    onMainFullscreenChanged: (callback) => ipcRenderer.on('main-fullscreen-changed', (event, isFull) => callback(isFull)),
+    onMainFullscreenChanged: (callback) => {
+        const handler = (event, isFull) => callback(isFull);
+        ipcRenderer.on('main-fullscreen-changed', handler);
+        return () => ipcRenderer.removeListener('main-fullscreen-changed', handler);
+    },
 
     // Export & Projects
     exportReorderedFolder: (items) => ipcRenderer.invoke('export-reordered-folder', items),
@@ -42,6 +66,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Updates & Shell
     checkForUpdates: () => ipcRenderer.send('check-for-updates'),
-    onUpdateMessage: (callback) => ipcRenderer.on('update-message', (event, data) => callback(data)),
+    onUpdateMessage: (callback) => {
+        const handler = (event, data) => callback(data);
+        ipcRenderer.on('update-message', handler);
+        return () => ipcRenderer.removeListener('update-message', handler);
+    },
     openUrl: (url) => ipcRenderer.send('open-url', url)
 });

@@ -361,8 +361,11 @@ function addMediaItems(newItems, replace = false) {
     }
 }
 
-function clearPresentation() {
+function clearPresentation(skipConfirm = false) {
     if (mediaItems.length === 0) return;
+    if (!skipConfirm && !confirm('Tem certeza de que deseja limpar toda a apresentação?')) {
+        return;
+    }
     mediaItems = [];
     currentIndex = 0;
     if (isPlaying) toggleSlideshow();
@@ -420,27 +423,32 @@ dropZone.addEventListener('drop', async (e) => {
 // REORDER MEDIA ENGINE (DRAG & DROP REORDERING)
 // ==========================================================================
 function reorderMedia(fromIndex, toIndex) {
-    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= mediaItems.length || toIndex >= mediaItems.length) return;
-    
-    const [movedItem] = mediaItems.splice(fromIndex, 1);
-    mediaItems.splice(toIndex, 0, movedItem);
+    try {
+        if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= mediaItems.length || toIndex >= mediaItems.length) return;
+        
+        const [movedItem] = mediaItems.splice(fromIndex, 1);
+        mediaItems.splice(toIndex, 0, movedItem);
 
-    // If active slide was moved, update currentIndex
-    if (currentIndex === fromIndex) {
-        currentIndex = toIndex;
-    } else if (fromIndex < currentIndex && toIndex >= currentIndex) {
-        currentIndex--;
-    } else if (fromIndex > currentIndex && toIndex <= currentIndex) {
-        currentIndex++;
-    }
+        // If active slide was moved, update currentIndex
+        if (currentIndex === fromIndex) {
+            currentIndex = toIndex;
+        } else if (fromIndex < currentIndex && toIndex >= currentIndex) {
+            currentIndex--;
+        } else if (fromIndex > currentIndex && toIndex <= currentIndex) {
+            currentIndex++;
+        }
 
-    renderThumbnails();
-    if (!gridModal.classList.contains('hidden')) {
-        renderGridCards();
+        renderThumbnails();
+        if (!gridModal.classList.contains('hidden')) {
+            renderGridCards();
+        }
+        updateNextUpCard();
+        syncToProjection();
+        showToast(`Posição atualizada para #${toIndex + 1}`);
+    } catch (err) {
+        console.error('Error reordering media:', err);
+        showToast('Erro ao reordenar mídia', 'error');
     }
-    updateNextUpCard();
-    syncToProjection();
-    showToast(`Posição atualizada para #${toIndex + 1}`);
 }
 
 // ==========================================================================
@@ -468,12 +476,22 @@ function renderThumbnails() {
                 <video src="${src}#t=0.5" preload="metadata" muted></video>
                 <span class="thumb-type-badge">VÍDEO</span>
                 <span class="thumb-index">#${item.originalIndex + 1}</span>
+                <button class="thumb-delete-btn" title="Remover">&times;</button>
             `;
         } else {
             thumb.innerHTML = `
                 <img src="${src}" loading="lazy" alt="${item.name}">
                 <span class="thumb-index">#${item.originalIndex + 1}</span>
+                <button class="thumb-delete-btn" title="Remover">&times;</button>
             `;
+        }
+
+        const deleteBtn = thumb.querySelector('.thumb-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                removeMediaItem(item.originalIndex);
+            };
         }
 
         // Click to display
@@ -603,6 +621,7 @@ async function showMedia(index) {
             mainVideo.className = `media-node ${settings.imageFit === 'cover' ? 'fit-cover' : ''}`;
             mainVideo.style.filter = activeFilter;
             mainVideo.style.transform = `rotate(${currentRotation}deg)`;
+            mainVideo.loop = !settings.videoAutoAdvance && settings.loopEnabled;
 
             videoControlsBar.classList.remove('hidden');
             mainVideo.currentTime = 0;
@@ -673,7 +692,7 @@ function updateNextUpCard() {
     nextUpName.textContent = nextItem.name;
 
     if (nextItem.type === 'video') {
-        nextUpThumbImg.src = 'logo.png';
+        nextUpThumbImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="40" viewBox="0 0 60 40"><rect width="60" height="40" fill="%2318181b"/><polygon points="24,14 40,20 24,26" fill="%233b82f6"/><rect x="2" y="2" width="56" height="36" fill="none" stroke="%233f3f46" stroke-width="1.5" rx="3"/></svg>';
     } else {
         nextUpThumbImg.src = toFileUrl(nextItem.path);
     }
@@ -755,7 +774,9 @@ function syncToProjection() {
         blackout: blackoutActive,
         whiteout: whiteoutActive,
         videoMuted: mainVideo.muted,
-        videoVolume: mainVideo.volume
+        videoVolume: mainVideo.volume,
+        videoAutoAdvance: settings.videoAutoAdvance,
+        loopVideo: !settings.videoAutoAdvance && settings.loopEnabled
     });
 }
 
@@ -859,8 +880,13 @@ function startProgressBar() {
     slideshowProgress.style.width = '0%';
     
     let duration = settings.slideshowSpeed;
-    if (mediaItems[currentIndex]?.type === 'video' && mainVideo.duration && settings.videoAutoAdvance) {
-        duration = mainVideo.duration * 1000;
+    if (mediaItems[currentIndex]?.type === 'video') {
+        if (settings.videoAutoAdvance && mainVideo.duration) {
+            duration = mainVideo.duration * 1000;
+        } else if (!settings.videoAutoAdvance) {
+            slideshowProgress.style.width = '0%';
+            return;
+        }
     }
 
     const step = 100 / (duration / 100);
@@ -921,6 +947,7 @@ timerResetBtn.onclick = (e) => {
 // ==========================================================================
 // ZOOM & PAN ENGINE
 // ==========================================================================
+let lastWheelTime = 0;
 imageDisplay.addEventListener('wheel', (e) => {
     if (mediaItems.length === 0) return;
     if (e.ctrlKey) {
@@ -929,8 +956,12 @@ imageDisplay.addEventListener('wheel', (e) => {
         zoomLevel = Math.max(1, Math.min(5, zoomLevel + delta));
         updateZoomTransform();
     } else {
-        if (e.deltaY > 0) nextMedia();
-        else prevMedia();
+        const now = Date.now();
+        if (now - lastWheelTime > 250) {
+            lastWheelTime = now;
+            if (e.deltaY > 0) nextMedia();
+            else if (e.deltaY < 0) prevMedia();
+        }
     }
     resetIdleTimer();
 }, { passive: false });
@@ -1100,17 +1131,28 @@ function renderGridCards() {
 }
 
 function removeMediaItem(index) {
-    mediaItems.splice(index, 1);
-    if (mediaItems.length === 0) {
-        clearPresentation();
-        closeGridModal();
-        return;
+    try {
+        if (index < 0 || index >= mediaItems.length) return;
+        mediaItems.splice(index, 1);
+        if (mediaItems.length === 0) {
+            clearPresentation(true);
+            closeGridModal();
+            return;
+        }
+        if (currentIndex >= mediaItems.length) currentIndex = mediaItems.length - 1;
+        if (gridTotalCount) {
+            gridTotalCount.textContent = `${mediaItems.length} ${mediaItems.length === 1 ? 'item' : 'itens'}`;
+        }
+        renderThumbnails();
+        if (!gridModal.classList.contains('hidden')) {
+            renderGridCards();
+        }
+        showMedia(currentIndex);
+        showToast('Item removido');
+    } catch (err) {
+        console.error('Error removing media item:', err);
+        showToast('Erro ao remover item', 'error');
     }
-    if (currentIndex >= mediaItems.length) currentIndex = mediaItems.length - 1;
-    renderThumbnails();
-    renderGridCards();
-    showMedia(currentIndex);
-    showToast('Item removido');
 }
 
 // ==========================================================================
@@ -1130,49 +1172,70 @@ exportFolderActionBtn.onclick = async () => {
         showToast('Nenhuma mídia para exportar', 'warn');
         return;
     }
+    exportFolderActionBtn.classList.add('btn-loading');
+    exportFolderActionBtn.disabled = true;
     showToast('Iniciando exportação...', 'info');
-    const result = await window.electronAPI.exportReorderedFolder(mediaItems);
-    if (result.success) {
-        showToast(result.message, 'success');
-        exportModal.classList.add('hidden');
-    } else {
-        showToast(result.message || 'Exportação cancelada', 'warn');
+    try {
+        const result = await window.electronAPI.exportReorderedFolder(mediaItems);
+        if (result.success) {
+            showToast(result.message, 'success');
+            exportModal.classList.add('hidden');
+        } else {
+            showToast(result.message || 'Exportação cancelada', 'warn');
+        }
+    } catch (err) {
+        console.error('Export folder error:', err);
+        showToast('Erro ao exportar pasta', 'error');
+    } finally {
+        exportFolderActionBtn.classList.remove('btn-loading');
+        exportFolderActionBtn.disabled = false;
     }
 };
 
 // 2. Save Project (.lumina)
 saveProjectActionBtn.onclick = async () => {
     if (mediaItems.length === 0) {
-        showToast('Apresentação vazia', 'warn');
+        showToast('Nenhuma apresentação para salvar', 'warn');
         return;
     }
     const projectData = {
         version: '2.0.0',
         savedAt: new Date().toISOString(),
-        mediaItems: mediaItems,
+        settings: settings,
         playlist: playlist,
-        settings: settings
+        mediaItems: mediaItems.map(m => ({
+            name: m.name,
+            path: m.path,
+            type: m.type,
+            rotation: m.rotation || 0
+        }))
     };
 
     const result = await window.electronAPI.saveProjectFile(projectData);
-    if (result.success) {
-        showToast('Projeto salvo com sucesso!', 'success');
+    if (result && result.success) {
+        showToast(result.message, 'success');
         exportModal.classList.add('hidden');
+    } else if (result && result.message) {
+        showToast(result.message, 'warn');
     }
 };
 
 // 3. Load Project (.lumina)
 async function handleLoadProject() {
     const result = await window.electronAPI.loadProjectFile();
-    if (result && result.success && result.projectData) {
-        const data = result.projectData;
+    if (result && result.success && result.data) {
+        const data = result.data;
         if (data.mediaItems && data.mediaItems.length > 0) {
             addMediaItems(data.mediaItems, true);
         }
         if (data.playlist && Array.isArray(data.playlist)) {
             playlist = data.playlist;
             renderPlaylist();
-            if (playlist.length > 0) playTrack(0);
+            if (playlist.length > 0) {
+                musicPlayer.classList.remove('hidden');
+                playlistBtn.classList.remove('hidden');
+                musicName.textContent = playlist[0].name;
+            }
         }
         if (data.settings) {
             settings = { ...settings, ...data.settings };
@@ -1195,13 +1258,23 @@ if (exportPptxActionBtn) {
             showToast('Nenhuma mídia para exportar', 'warn');
             return;
         }
+        exportPptxActionBtn.classList.add('btn-loading');
+        exportPptxActionBtn.disabled = true;
         showToast('Gerando arquivo PowerPoint (.pptx)...', 'info');
-        const result = await window.electronAPI.exportPptx(mediaItems);
-        if (result && result.success) {
-            showToast(result.message, 'success');
-            exportModal.classList.add('hidden');
-        } else if (result && result.message) {
-            showToast(result.message, 'warn');
+        try {
+            const result = await window.electronAPI.exportPptx(mediaItems);
+            if (result && result.success) {
+                showToast(result.message, 'success');
+                exportModal.classList.add('hidden');
+            } else if (result && result.message) {
+                showToast(result.message, 'warn');
+            }
+        } catch (err) {
+            console.error('Export PPTX error:', err);
+            showToast('Erro ao exportar PowerPoint', 'error');
+        } finally {
+            exportPptxActionBtn.classList.remove('btn-loading');
+            exportPptxActionBtn.disabled = false;
         }
     };
 }
@@ -1213,13 +1286,23 @@ if (exportPdfActionBtn) {
             showToast('Nenhuma mídia para exportar', 'warn');
             return;
         }
+        exportPdfActionBtn.classList.add('btn-loading');
+        exportPdfActionBtn.disabled = true;
         showToast('Gerando documento PDF (.pdf)...', 'info');
-        const result = await window.electronAPI.exportPdf(mediaItems);
-        if (result && result.success) {
-            showToast(result.message, 'success');
-            exportModal.classList.add('hidden');
-        } else if (result && result.message) {
-            showToast(result.message, 'warn');
+        try {
+            const result = await window.electronAPI.exportPdf(mediaItems);
+            if (result && result.success) {
+                showToast(result.message, 'success');
+                exportModal.classList.add('hidden');
+            } else if (result && result.message) {
+                showToast(result.message, 'warn');
+            }
+        } catch (err) {
+            console.error('Export PDF error:', err);
+            showToast('Erro ao exportar PDF', 'error');
+        } finally {
+            exportPdfActionBtn.classList.remove('btn-loading');
+            exportPdfActionBtn.disabled = false;
         }
     };
 }
@@ -1239,8 +1322,11 @@ saveCurrentActionBtn.onclick = async () => {
     try {
         const canvas = document.createElement('canvas');
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         img.src = toFileUrl(current.path);
+
+        img.onerror = () => {
+            showToast('Erro ao carregar a imagem para captura', 'error');
+        };
 
         img.onload = async () => {
             const isRotated90 = currentRotation === 90 || currentRotation === 270;
@@ -1566,7 +1652,7 @@ window.electronAPI.onNavigate((direction) => {
 function resetIdleTimer() {
     imageDisplay.classList.add('show-cursor');
     clearTimeout(idleTimer);
-    if (settings.autoHideEnabled && !isPlaying) {
+    if (settings.autoHideEnabled) {
         idleTimer = setTimeout(() => {
             imageDisplay.classList.remove('show-cursor');
         }, 3500);
