@@ -56,7 +56,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Lumina Presentation",
-      "upgradeCode": "E5D3B892-4C1F-48A2-9F83-615DF91A2E3B"
+      "upgradeCode": "E5D3B892-4C1F-48A2-9F83-615DF91A2E3B",
+      "additionalLightArgs": [
+        "-sval"
+      ]
     },
     "nsis": {
       "oneClick": false,
