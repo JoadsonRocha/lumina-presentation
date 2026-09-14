@@ -1,179 +1,181 @@
 <div align="center">
 
 # 🌟 Lumina Presentation 2.0 PRO
-### Apresentador e Visualizador Profissional de Fotos & Vídeos
+### Professional Photo & Video Presenter and Dual-Screen Viewer
+
+[English](README.md) | [Português (Brasil)](README.pt-BR.md)
 
 [![Release](https://img.shields.io/badge/version-2.0.0-blue.svg?style=flat-square)](https://github.com/joadsonrocha/lumina-presentation)
 [![Electron](https://img.shields.io/badge/Electron-41.5.0-47848F.svg?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933.svg?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-39%20Passed-22c55e.svg?style=flat-square)](https://github.com/joadsonrocha/lumina-presentation)
-[![License](https://img.shields.io/badge/license-MIT-purple.svg?style=flat-square)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-40%20Passed-22c55e.svg?style=flat-square)](https://github.com/joadsonrocha/lumina-presentation)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/joadsonrocha/lumina-presentation/pulls)
 
 <p align="center">
-  <b>O Lumina Presentation é uma aplicação desktop moderna projetada para apresentações de fotos e vídeos de alta performance, com suporte a Projeção em 2ª Tela (F5), Reordenação por Arrastar e Soltar (Drag & Drop), Exportação para PowerPoint (.pptx) e PDF (.pdf), e interface minimalista focada no conteúdo.</b>
+  <b>Lumina Presentation is a modern desktop application built for high-performance photo and video slideshows, featuring synchronized Dual-Screen Projection (F5), Drag & Drop reordering, PowerPoint (.pptx) & PDF (.pdf) export, background audio playback, and a clean, minimalist interface focused on content.</b>
 </p>
 
 </div>
 
 ---
 
-## 📋 Índice
+## 📋 Table of Contents
 
-- [Destaques](#-destaques)
-- [Funcionalidades Principais](#-funcionalidades-principais)
-- [Central de Exportação & Projetos](#-central-de-exportação--projetos)
-- [Atalhos de Teclado (Cheat Sheet)](#-atalhos-de-teclado)
-- [Arquitetura & Tecnologias](#-arquitetura--tecnologias)
-- [Como Instalar e Executar](#-como-instalar-e-executar)
-- [Executando Testes Automatizados](#-executando-testes-automatizados)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
-- [Licença & Autor](#-licença--autor)
-
----
-
-## ✨ Destaques
-
-- 🎬 **Mídias Unificadas:** Apresente fotos (`JPG, PNG, WEBP, GIF, SVG, AVIF`) e vídeos (`MP4, WEBM, MOV, MKV, AVI`) juntos no mesmo fluxo.
-- 📺 **Projeção Dual-Screen (F5):** Controle a apresentação na sua tela enquanto projeta em tela cheia sincronizada no segundo monitor ou projetor.
-- 🔄 **Drag & Drop Inteligente:** Reordene slides com facilidade tanto na barra lateral de miniaturas quanto no modo grade em mosaico.
-- 📊 **Exportação Multi-Formato:** Gere arquivos nativos de **PowerPoint (.pptx)**, documentos **PDF (.pdf)** widescreen 16:9, ou copie pastas com ordenação numérica (`01_...`, `02_...`).
-- ⏱️ **HUD do Apresentador:** Cronômetro integrado de palco, indicador de próximo slide (*Next Up*) e comandos rápidos de palco (<kbd>B</kbd> para Blackout, <kbd>W</kbd> para Whiteout).
-- 🎵 **Playlist de Áudio Integrada:** Adicione trilhas sonoras e músicas de fundo com controle suave de volume e atalho de mudo (<kbd>M</kbd>).
-- 🎨 **Interface Clean & Minimalista:** Paleta grafite escura elegante, sem excesso de brilhos artificiais, com efeito Ambilight sutil de fundo.
+- [Highlights](#-highlights)
+- [Key Features](#-key-features)
+- [Export & Project Management](#-export--project-management)
+- [Keyboard Shortcuts (Cheat Sheet)](#-keyboard-shortcuts)
+- [Architecture & Tech Stack](#-architecture--tech-stack)
+- [Installation & Getting Started](#-installation--getting-started)
+- [Running Automated Tests](#-running-automated-tests)
+- [Project Structure](#-project-structure)
+- [License & Author](#-license--author)
 
 ---
 
-## 🚀 Funcionalidades Principais
+## ✨ Highlights
 
-### 1. 📺 Projeção em Segunda Tela (F5)
-- Detecção automática de monitores secundários via Electron Screen API.
-- Sincronização bidirecional em tempo real de filtros (P&B, Sépia, Alto Contraste), rotação de 90° em 90°, enquadramento (*Contain / Cover*) e margens (*Safe Area*).
-- Fechamento e reabertura limpos com tecla <kbd>F5</kbd> ou <kbd>Esc</kbd>.
-
-### 2. 🔄 Reordenação por Arrastar e Soltar (Drag & Drop)
-- **Barra Lateral de Miniaturas:** Arraste qualquer miniatura de foto ou vídeo para reposicionar sua ordem. Indicadores visuais mostram o ponto exato de inserção.
-- **Modo Grade / Mosaico (Tecla <kbd>G</kbd>):** Visão panorâmica de todos os slides para reorganização rápida, busca por nome e ordenação por filtros (A-Z, Tipo, Shuffle).
-
-### 3. ➕ Adição Contínua de Mídias
-- Adicione novas fotos ou pastas inteiras a qualquer momento sem perder os itens que já estavam na apresentação.
-- Filtro inteligente anti-duplicatas para evitar inclusão acidental do mesmo arquivo.
-- Botão **Limpar Apresentação (🗑️)** para recomeçar quando desejado.
-
-### 4. 🎬 Motor de Reprodução de Vídeos
-- Suporte nativo aos formatos `MP4`, `WEBM`, `MOV`, `MKV`, `AVI` e `OGG`.
-- Barra de controle de vídeo com seekbar interativa, tempo decorrido, duração total e volume independente.
-- Opção configurável de **Avanço Automático**: avança automaticamente para o próximo slide assim que o vídeo termina.
-
-### 5. 🔍 Inspetor de Metadados EXIF
-- Leitura instantânea de dados de câmera, ISO, abertura (f-stop), tempo de exposição, data original e resolução via [Exifr](https://github.com/MikeKovarik/exifr).
+- 🎬 **Unified Media Engine:** Present photos (`JPG, PNG, WEBP, GIF, SVG, AVIF`) and videos (`MP4, WEBM, MOV, MKV, AVI, OGG`) seamlessly in the same playlist.
+- 📺 **Dual-Screen Projection (F5):** Control the presentation on your main display while projecting clean, synchronized fullscreen output to a secondary monitor or projector.
+- 🔄 **Smart Drag & Drop:** Easily reorder slides in the thumbnail sidebar or switch to the mosaic overview Grid mode.
+- 📊 **Multi-Format Exporting:** Generate native **PowerPoint (.pptx)** presentations, high-definition **PDF (.pdf)** albums, or export sequentially numbered folders (`01_...`, `02_...`).
+- ⏱️ **Presenter HUD:** Built-in presentation stopwatch, upcoming slide preview card (*Next Up*), and instant stage controls (<kbd>B</kbd> for Blackout, <kbd>W</kbd> for Whiteout).
+- 🎵 **Integrated Audio Playlist:** Add background music and soundtracks with smooth volume controls and mute shortcut (<kbd>M</kbd>).
+- 🎨 **Minimalist Dark Aesthetics:** Sleek graphite dark palette with subtle Ambilight halo effect, smooth animations, and zero visual clutter.
 
 ---
 
-## 📤 Central de Exportação & Projetos
+## 🚀 Key Features
 
-O Lumina conta com um painel dedicado de exportação acessível pelo botão de download no cabeçalho:
+### 1. 📺 Dual-Screen Projection (F5)
+- Automatic secondary display detection via Electron's Screen API.
+- Real-time bidirectional synchronization for image filters (B&W, Sepia, High Contrast), 90° increments rotation, framing (*Contain / Cover*), and margins (*Safe Area*).
+- Clean opening and closing with <kbd>F5</kbd> or <kbd>Esc</kbd>.
 
-| Opção | Descrição |
+### 2. 🔄 Drag & Drop Reordering
+- **Sidebar Thumbnails:** Drag and drop any photo or video thumbnail to reorder. Clear visual indicators show the exact drop destination.
+- **Grid Mosaic Mode (Key <kbd>G</kbd>):** Full-screen panoramic view of all media items for rapid reorganization, title search, and automated sorting (A-Z, Media Type, Shuffle).
+
+### 3. ➕ Continuous Media Ingestion
+- Append new files or complete folders at any time without resetting the active slideshow.
+- Intelligent deduplication filter prevents accidental duplicate entries.
+- Quick **Clear Presentation (🗑️)** with confirmation dialog to protect against accidental resets.
+
+### 4. 🎬 Video Playback Engine
+- Native hardware-accelerated playback for `MP4`, `WEBM`, `MOV`, `MKV`, `AVI`, and `OGG`.
+- Integrated video control bar with interactive seekbar, elapsed time, total duration, and volume slider.
+- Optional **Auto-Advance**: automatically transitions to the next slide once the video completes.
+
+### 5. 🔍 EXIF Metadata Inspector
+- Instant camera specs inspection: ISO, focal aperture (f-stop), exposure time, capture date, and original resolution powered by [Exifr](https://github.com/MikeKovarik/exifr).
+
+---
+
+## 📤 Export & Project Management
+
+Access the dedicated export dialog anytime via the header download button:
+
+| Feature | Description |
 | :--- | :--- |
-| **📊 Exportar PowerPoint (.pptx)** | Cria um arquivo nativo do Microsoft PowerPoint em formato widescreen 16:9 com todos os slides organizados. |
-| **📄 Exportar Documento PDF (.pdf)** | Gera um álbum / apresentação em PDF widescreen em alta definição com 1 slide por página. |
-| **📁 Exportar Pasta Ordenada** | Copia todas as fotos e vídeos para uma nova pasta com prefixos numéricos (`01_nome.jpg`, `02_video.mp4`). |
-| **💾 Salvar Projeto (.lumina)** | Salva o estado completo da apresentação (mídias, playlist e configurações) em arquivo JSON `.lumina`. |
-| **📂 Abrir Projeto (.lumina)** | Restaura uma apresentação salva anteriormente em um clique. |
-| **🖼️ Salvar Slide Atual** | Exporta a foto em exibição com os filtros e rotação aplicados em formato PNG/JPG. |
+| **📊 Export to PowerPoint (.pptx)** | Generates a native Microsoft PowerPoint widescreen (16:9) presentation file with all slides organized. |
+| **📄 Export to PDF Document (.pdf)** | Creates a high-resolution widescreen PDF presentation album with one slide per page. |
+| **📁 Export Sequentially Numbered Folder** | Copies all images and videos to a selected destination folder with padded numerical prefixes (`01_name.jpg`, `02_clip.mp4`). |
+| **💾 Save Project (.lumina)** | Stores the entire presentation state (media paths, playlist, and customized preferences) into a portable `.lumina` project file. |
+| **📂 Open Project (.lumina)** | Restores a previously saved presentation session in one click. |
+| **🖼️ Save Current Frame** | Exports the current slide with active filters and rotation applied as a PNG/JPG image file. |
 
 ---
 
-## ⌨️ Atalhos de Teclado
+## ⌨️ Keyboard Shortcuts
 
-| Atalho | Ação |
+| Shortcut | Action |
 | :--- | :--- |
-| <kbd>→</kbd> ou <kbd>D</kbd> | Próximo Slide / Mídia |
-| <kbd>←</kbd> ou <kbd>A</kbd> | Slide / Mídia Anterior |
-| <kbd>Espaço</kbd> | Iniciar / Pausar Slideshow |
-| <kbd>F5</kbd> | Ativar / Desativar Projeção (2ª Tela) |
-| <kbd>F11</kbd> ou <kbd>F</kbd> | Alternar Tela Cheia na Janela Principal |
-| <kbd>G</kbd> | Abrir / Fechar Modo Grade (Mosaico) |
-| <kbd>B</kbd> | Alternar Modo Blackout (Tela Preta Instantânea) |
-| <kbd>W</kbd> | Alternar Modo Whiteout (Tela Branca Instantânea) |
-| <kbd>R</kbd> | Girar Mídia em 90° |
-| <kbd>M</kbd> | Mutar / Desmutar Áudio (Vídeo ou Música de Fundo) |
-| <kbd>Home</kbd> | Ir para o Primeiro Slide |
-| <kbd>End</kbd> | Ir para o Último Slide |
-| <kbd>Esc</kbd> | Fechar Modais / Desativar Blackout/Whiteout |
-| <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> | Zoom In / Zoom Out Interativo |
-| <kbd>Duplo Clique</kbd> | Alternar Zoom 1.75x com Pan |
+| <kbd>→</kbd> or <kbd>D</kbd> | Next Slide / Media |
+| <kbd>←</kbd> or <kbd>A</kbd> | Previous Slide / Media |
+| <kbd>Space</kbd> | Start / Pause Slideshow |
+| <kbd>F5</kbd> | Toggle Projection (2nd Screen) |
+| <kbd>F11</kbd> or <kbd>F</kbd> | Toggle Fullscreen on Main Window |
+| <kbd>G</kbd> | Toggle Grid Overview (Mosaic Mode) |
+| <kbd>B</kbd> | Toggle Blackout (Instant Black Screen) |
+| <kbd>W</kbd> | Toggle Whiteout (Instant White Screen) |
+| <kbd>R</kbd> | Rotate Media 90° Clockwise |
+| <kbd>M</kbd> | Mute / Unmute Audio (Video or Background Music) |
+| <kbd>Home</kbd> | Jump to First Slide |
+| <kbd>End</kbd> | Jump to Last Slide |
+| <kbd>Esc</kbd> | Close Modals / Exit Blackout & Whiteout |
+| <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> | Interactive Zoom In / Zoom Out |
+| <kbd>Double Click</kbd> | Toggle 1.75x Zoom with Panning |
 
 ---
 
-## 🛠️ Arquitetura & Tecnologias
+## 🛠️ Architecture & Tech Stack
 
 ```
 +-------------------------------------------------------------+
 |                     LUMINA PRESENTATION                     |
 +-------------------------------------------------------------+
 |  [Main Process (Node.js/Electron)]                          |
-|  - Process Singleton Lock (Prevenção de conflitos no disco) |
-|  - Multi-Display Engine (Detecção de Monitores Secundários) |
+|  - Process Singleton Lock (Prevents duplicate instances)    |
+|  - Multi-Display Engine (Secondary monitor discovery)       |
 |  - PPTX Engine (PptxGenJS) & PDF PrintToPDF Engine          |
-|  - File System Scanners (Varredura Recursiva de Pastas)     |
+|  - File System Scanners (Recursive directory traversal)     |
 +-------------------------------------------------------------+
                               ↕ IPC Channels
 +-------------------------------------------------------------+
-|  [Preload Context Bridge (Segurança & CSP)]                 |
+|  [Preload Context Bridge (Security, CSP & Cleanup Handlers)]|
 +-------------------------------------------------------------+
                               ↕
 +------------------------------+------------------------------+
-|  [Janela Principal]          |  [Janela de Projeção]        |
-|  - HUD do Apresentador       |  - Tela Cheia sem Bordas     |
-|  - Drag & Drop Reordering    |  - Sincronização em Tempo    |
-|  - Playlist de Áudio         |    Real (State Mirroring)    |
-|  - Central de Exportação     |  - Overlays de Palco         |
+|  [Main Window]               |  [Projection Window]         |
+|  - Presenter HUD             |  - Borderless Fullscreen     |
+|  - Drag & Drop Reordering    |  - Real-Time State Mirroring |
+|  - Background Audio Playlist |  - Instant Stage Overlays    |
+|  - Export Center             |  - Ambilight Background Glow |
 +------------------------------+------------------------------+
 ```
 
 - **Runtime:** [Electron 41](https://www.electronjs.org/)
-- **Linguagens:** JavaScript (ES6+), HTML5, CSS3 Nativo (sem Tailwind)
-- **Bibliotecas:**
-  - `pptxgenjs` (Geração nativa de apresentações PowerPoint)
-  - `exifr` (Leitura de metadados fotográficos EXIF)
-  - `electron-updater` (Verificação de novas versões)
+- **Languages:** Vanilla JavaScript (ES6+), HTML5, Native CSS3 (No Tailwind)
+- **Dependencies:**
+  - `pptxgenjs` (Native PowerPoint slide deck generation)
+  - `exifr` (Photo EXIF metadata parser)
+  - `electron-updater` (Auto-update checks)
 
 ---
 
-## 📦 Como Instalar e Executar
+## 📦 Installation & Getting Started
 
-### Pré-requisitos
-- [Node.js](https://nodejs.org/) versão 18 ou superior instalado.
+### Prerequisites
+- [Node.js](https://nodejs.org/) version 18 or higher.
 
-### 1. Clonar o repositório
+### 1. Clone the repository
 ```bash
 git clone https://github.com/joadsonrocha/lumina-presentation.git
 cd lumina-presentation
 ```
 
-### 2. Instalar dependências
+### 2. Install dependencies
 ```bash
 npm install
 ```
 
-### 3. Executar o aplicativo
+### 3. Run the application
 ```bash
 npm start
 ```
 
 ---
 
-## 🧪 Executando Testes Automatizados
+## 🧪 Running Automated Tests
 
-O projeto conta com uma suíte de testes automatizados que valida a integridade dos arquivos, sintaxe JavaScript, contratos de canais IPC, suporte a extensões de mídia e conversão de caminhos no Windows:
+The repository includes an automated test suite verifying file integrity, JavaScript syntax, IPC channel contracts, media extensions, and cross-platform path normalization:
 
 ```bash
 npm test
 ```
 
-Resultado esperado:
+Expected output:
 ```
 ====================================================
 🧪 INICIANDO BATERIA DE TESTES DO LUMINA 2.0
@@ -184,37 +186,39 @@ Resultado esperado:
 📡 4. Contrato de Canais IPC entre Janelas    [PASS]
 🛡️ 5. Políticas de Segurança (CSP & Preload)   [PASS]
 ====================================================
-📊 RESULTADO FINAL: 39 APROVADOS | 0 FALHAS
+📊 RESULTADO FINAL: 40 APROVADOS | 0 FALHAS
 ====================================================
 ```
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 lumina-presentation/
-├── .gitignore              # Regras de exclusão do Git
-├── index.html              # Interface do Apresentador (Janela Principal)
-├── presentation.html       # Tela de Projeção em 2ª Tela
-├── main.js                 # Processo Principal do Electron & Exportadores
-├── preload.js              # Context Bridge seguro para comunicação IPC
-├── renderer.js             # Motor de renderização, slideshow e HUD
-├── style.css               # Design System minimalista escuro
-├── test-suite.js           # Suíte de testes automatizados
-├── logo.png                # Identidade visual da aplicação
-├── package.json            # Manifesto e dependências do projeto
-└── README.md               # Documentação do projeto
+├── .gitignore              # Git ignore rules
+├── index.html              # Main presenter interface
+├── presentation.html       # Projection window (2nd screen)
+├── main.js                 # Electron main process & export engines
+├── preload.js              # Secure IPC Context Bridge
+├── renderer.js             # UI logic, HUD, slideshow & video engine
+├── style.css               # Dark minimalist design system
+├── test-suite.js           # Automated test suite
+├── logo.png                # Visual brand assets
+├── package.json            # Project manifest & scripts
+├── LICENSE                 # GNU General Public License v3.0 (GPLv3)
+├── README.md               # English Documentation
+└── README.pt-BR.md         # Portuguese Documentation
 ```
 
 ---
 
-## 📄 Licença
+## 📄 License
 
-Este projeto está licenciado sob a licença MIT - consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
-  Desenvolvido com dedicação por <b><a href="https://github.com/joadsonrocha">Joadson Rocha</a></b>
+  Developed with care by <b><a href="https://github.com/joadsonrocha">Joadson Rocha</a></b>
 </div>
