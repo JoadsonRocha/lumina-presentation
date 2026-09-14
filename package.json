@@ -36,19 +36,29 @@
     "appId": "com.joadsonrocha.lumina",
     "productName": "Lumina Presentation",
     "copyright": "Copyright © 2026 Joadson Rocha. Todos os direitos reservados.",
+    "artifactName": "${productName}-${version}-Setup.${ext}",
+    "directories": {
+      "output": "dist"
+    },
     "win": {
       "target": [
-        "nsis",
-        "msi"
+        "msi",
+        "nsis"
       ],
+      "icon": "icon.ico",
       "publisherName": "Joadson Rocha",
       "legalTrademarks": "Lumina Presentation™ por Joadson Rocha",
       "requestedExecutionLevel": "asInvoker"
     },
     "msi": {
       "oneClick": false,
-      "perMachine": false,
-      "runAfterFinish": true
+      "perMachine": true,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lumina Presentation",
+      "upgradeCode": "E5D3B892-4C1F-48A2-9F83-615DF91A2E3B",
+      "warningsAsErrors": false
     },
     "nsis": {
       "oneClick": false,

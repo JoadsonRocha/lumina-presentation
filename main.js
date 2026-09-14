@@ -10,6 +10,11 @@ if (!gotTheLock) {
     process.exit(0);
 }
 
+const APP_ID = 'com.joadsonrocha.lumina';
+if (process.platform === 'win32') {
+    app.setAppUserModelId(APP_ID);
+}
+
 // Disable problematic disk cache flags on Windows
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
